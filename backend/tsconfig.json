@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+      // …your other settings…
+      "moduleResolution": "node",
+      "target": "es2020",
+      "lib": ["es2020"],
+      "types": ["node"],          // ← add this
+      "esModuleInterop": true
+    }
+  }
+  

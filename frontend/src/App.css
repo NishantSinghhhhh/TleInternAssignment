@@ -1,0 +1,14 @@
+#root {
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+
+  /* ↓ allow horizontal overflow to scroll ↓ */
+  overflow-x: hidden;
+  /* optional: smooth touch‐scroll on mobile browsers */
+  -webkit-overflow-scrolling: touch;
+  /* ensure padding is included in the width calculation */
+  box-sizing: border-box;
+}
