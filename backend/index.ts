@@ -46,6 +46,7 @@ app.use(
       cb(new Error('CORS: origin not allowed'));
     },
     credentials: true,
+    optionsSuccessStatus: 204, 
   }),
 );
 
