@@ -83,32 +83,34 @@ export function SyncDashboard() {
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'logs' | 'users' | 'settings'>('overview')
- 
-  const api = {
-    get: async (url: string) => {
-      const response = await fetch(`http://localhost:8000${url}`)
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-      return await response.json()
-    },
-    post: async (url: string, data?: any) => {
-      const response = await fetch(`http://localhost:8000${url}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: data ? JSON.stringify(data) : undefined
-      })
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-      return await response.json()
-    },
-    put: async (url: string, data: any) => {
-      const response = await fetch(`http://localhost:8000${url}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      })
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-      return await response.json()
-    }
-  }
+  
+  const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
+
+const api = {
+  get: async (url: string) => {
+    const res = await fetch(`${API_BASE_URL}${url}`);
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    return res.json();
+  },
+  post: async (url: string, data?: any) => {
+    const res = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: data ? JSON.stringify(data) : undefined,
+    });
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    return res.json();
+  },
+  put: async (url: string, data: any) => {
+    const res = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    return res.json();
+  },
+};
 
   if(syncLogs){
     
