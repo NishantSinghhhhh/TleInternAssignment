@@ -116,35 +116,3 @@ export const sendEmailByHandle = async (
     });
   }
 };
-
-/** GET /email/test-service - Test email service configuration */
-export const testEmailService = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const emailService = new EmailService();
-    const isWorking = await emailService.testEmailService();
-
-    res.json({
-      success: isWorking,
-      message: isWorking ? 'Email service is working correctly' : 'Email service configuration has issues',
-      timestamp: new Date().toISOString(),
-      config: {
-        emailUser: process.env.EMAIL_USER ? '✅ Set' : '❌ Missing',
-        clientId: process.env.CLIENT_ID ? '✅ Set' : '❌ Missing',
-        clientSecret: process.env.CLIENT_SECRET ? '✅ Set' : '❌ Missing',
-        refreshToken: process.env.REFRESH_TOKEN ? '✅ Set' : '❌ Missing'
-      }
-    });
-
-  } catch (error: any) {
-    console.error('Error testing email service:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to test email service',
-      details: error.message
-    });
-  }
-};
