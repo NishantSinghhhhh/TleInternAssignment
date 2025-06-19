@@ -89,13 +89,13 @@ interface PaginatedResponse {
   totalCount: number
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
+
 const api = axios.create({
-  baseURL: 'http://localhost:8000',
-  timeout: 15000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
+  baseURL: API_BASE_URL,
+  timeout: 15_000,          // 15 s
+  headers: { 'Content-Type': 'application/json' },
+});
 
 export default function CPSheetPage() {
   const [users, setUsers] = useState<CFUser[]>([])
