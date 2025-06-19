@@ -41,7 +41,7 @@ export function PaginationControls({ currentPage, totalPages, onPageChange }: Pa
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
         variant="outline"
-        className="border-gray-300"
+        className="border-border"
       >
         <ChevronLeft className="w-4 h-4 mr-1" />
         Previous
@@ -55,10 +55,10 @@ export function PaginationControls({ currentPage, totalPages, onPageChange }: Pa
           variant={pageNum === currentPage ? "default" : "outline"}
           className={
             pageNum === currentPage
-              ? "bg-blue-600 hover:bg-blue-700 text-white"
+              ? "bg-primary hover:bg-primary/90 text-primary-foreground"
               : pageNum === "..."
-                ? "cursor-default border-gray-300"
-                : "border-gray-300 hover:bg-gray-50"
+                ? "cursor-default border-border"
+                : "border-border hover:bg-accent"
           }
         >
           {pageNum}
@@ -69,7 +69,7 @@ export function PaginationControls({ currentPage, totalPages, onPageChange }: Pa
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
         variant="outline"
-        className="border-gray-300"
+        className="border-border"
       >
         Next
         <ChevronRight className="w-4 h-4 ml-1" />

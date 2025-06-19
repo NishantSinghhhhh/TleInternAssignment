@@ -60,9 +60,96 @@ interface CFInfoResponse {
   result: CFUserInfo[];
 }
 
-// ========== EXISTING FUNCTIONS ==========
 
-/** GET /students/fetch-100 - Fetch details of 100 users and optionally save to DB */
+interface CFRatingChange {
+  contestId: number;
+  contestName: string;
+  handle: string;
+  rank: number;
+  ratingUpdateTimeSeconds: number;
+  oldRating: number;
+  newRating: number;
+}
+
+interface CFSubmission {
+  id: number;
+  contestId?: number;
+  creationTimeSeconds: number;
+  relativeTimeSeconds: number;
+  problem: {
+    contestId?: number;
+    index: string;
+    name: string;
+    type: string;
+    points?: number;
+    rating?: number;
+    tags: string[];
+  };
+  author: {
+    contestId?: number;
+    members: Array<{
+      handle: string;
+      name?: string;
+    }>;
+    participantType: string;
+    ghost: boolean;
+    room?: number;
+    startTimeSeconds?: number;
+  };
+  programmingLanguage: string;
+  verdict: string;
+  testset: string;
+  passedTestCount: number;
+  timeConsumedMillis: number;
+  memoryConsumedBytes: number;
+}
+
+interface CFRatingResponse {
+  status: 'OK' | 'FAILED';
+  result: CFRatingChange[];
+}
+
+interface CFStatusResponse {
+  status: 'OK' | 'FAILED';
+  result: CFSubmission[];
+}
+
+// Add these interfaces to your controller file
+// Add these interfaces to your controller file
+
+interface CFContest {
+id: number;
+name: string;
+type: string;
+phase: string;
+frozen: boolean;
+durationSeconds: number;
+startTimeSeconds?: number;
+relativeTimeSeconds?: number;
+}
+
+interface CFContestListResponse {
+status: 'OK' | 'FAILED';
+result: CFContest[];
+}
+
+interface CFContestStandingsResponse {
+status: 'OK' | 'FAILED';
+result: {
+  contest: CFContest;
+  problems: Array<{
+    contestId: number;
+    index: string;
+    name: string;
+    type: string;
+    points?: number;
+    rating?: number;
+    tags: string[];
+  }>;
+  rows: any[];
+};
+}
+
 export const fetch100Users = async (
   req: Request,
   res: Response<CFUserInfo[]>,
@@ -175,7 +262,6 @@ export const fetch100Users = async (
   }
 };
 
-
 export const fetchStudentDetails = async (
   req: Request,
   res: Response,
@@ -249,7 +335,10 @@ export const fetchStudentDetails = async (
         createdAt: student.createdAt,
         updatedAt: student.updatedAt,
         // new flag:
-        activeLast7Days
+        activeLast7Days,
+        reminderCount: student.inactivityTracking?.reminderCount || 0,
+        inactivityEmailsEnabled: student.emailNotifications?.inactivityReminders ?? true,
+
       }
     })
     
@@ -574,7 +663,6 @@ export const getStudentStats = async (
 };
 
 // ========== UPDATE OPERATIONS ==========
-
 /** PUT /students/:id - Update student */
 export const updateStudent = async (
   req: Request,
@@ -623,16 +711,47 @@ export const updateStudent = async (
       'country', 'city', 'organization'
     ];
 
+    // Handle basic fields
     fieldsToCheck.forEach(field => {
       const currentValue = normalizeValue(currentStudent[field]);
       const incomingValue = normalizeValue(incomingData[field]);
       
-      // Compare values (handle undefined/null/empty string equivalency)
       if (currentValue !== incomingValue) {
         changedFields[field] = incomingValue;
         console.log(`🔄 Field '${field}' changed: '${currentValue}' → '${incomingValue}'`);
       }
     });
+
+    // Handle emailNotifications object specially to avoid conflicts
+    if (incomingData.emailNotifications) {
+      const currentEmailNotifications = currentStudent.emailNotifications ?? { 
+        inactivityReminders: false 
+      };
+      const incomingEmailNotifications = incomingData.emailNotifications;
+
+      // Compare each nested property and update only if changed
+      let emailNotificationsChanged = false;
+      const newEmailNotifications = { ...currentEmailNotifications };
+
+      Object.keys(incomingEmailNotifications).forEach(key => {
+        const currentValue = currentEmailNotifications[key];
+        const incomingValue = incomingEmailNotifications[key];
+        
+        if (currentValue !== incomingValue) {
+          newEmailNotifications[key] = incomingValue;
+          emailNotificationsChanged = true;
+          console.log(
+            `🔄 Field 'emailNotifications.${key}' changed: ` +
+            `${currentValue} → ${incomingValue}`
+          );
+        }
+      });
+
+      // Only add to changedFields if something actually changed
+      if (emailNotificationsChanged) {
+        changedFields.emailNotifications = newEmailNotifications;
+      }
+    }
 
     // If no fields have changed, return early
     if (Object.keys(changedFields).length === 0) {
@@ -657,6 +776,7 @@ export const updateStudent = async (
         friendOfCount: currentStudent.friendOfCount,
         firstName: currentStudent.firstName,
         lastName: currentStudent.lastName,
+        emailNotifications: currentStudent.emailNotifications,
       };
 
       return res.json({
@@ -724,6 +844,7 @@ export const updateStudent = async (
       friendOfCount: updatedStudent.friendOfCount,
       firstName: updatedStudent.firstName,
       lastName: updatedStudent.lastName,
+      emailNotifications: updatedStudent.emailNotifications,
     };
 
     console.log(`✅ Successfully updated student: ${updatedStudent.handle}`);
@@ -734,7 +855,9 @@ export const updateStudent = async (
       updatedFields: Object.keys(changedFields),
       changesSummary: Object.keys(changedFields).map(field => ({
         field,
-        oldValue: normalizeValue(currentStudent[field]) || null,
+        oldValue: field === 'emailNotifications' 
+          ? currentStudent.emailNotifications 
+          : normalizeValue(currentStudent[field]) || null,
         newValue: normalizeValue(changedFields[field]) || null
       }))
     });
@@ -795,95 +918,6 @@ export const deleteStudent = async (
     next(error);
   }
 };
-
-interface CFRatingChange {
-    contestId: number;
-    contestName: string;
-    handle: string;
-    rank: number;
-    ratingUpdateTimeSeconds: number;
-    oldRating: number;
-    newRating: number;
-  }
-  
-  interface CFSubmission {
-    id: number;
-    contestId?: number;
-    creationTimeSeconds: number;
-    relativeTimeSeconds: number;
-    problem: {
-      contestId?: number;
-      index: string;
-      name: string;
-      type: string;
-      points?: number;
-      rating?: number;
-      tags: string[];
-    };
-    author: {
-      contestId?: number;
-      members: Array<{
-        handle: string;
-        name?: string;
-      }>;
-      participantType: string;
-      ghost: boolean;
-      room?: number;
-      startTimeSeconds?: number;
-    };
-    programmingLanguage: string;
-    verdict: string;
-    testset: string;
-    passedTestCount: number;
-    timeConsumedMillis: number;
-    memoryConsumedBytes: number;
-  }
-  
-  interface CFRatingResponse {
-    status: 'OK' | 'FAILED';
-    result: CFRatingChange[];
-  }
-  
-  interface CFStatusResponse {
-    status: 'OK' | 'FAILED';
-    result: CFSubmission[];
-  }
-  
-// Add these interfaces to your controller file
-// Add these interfaces to your controller file
-
-interface CFContest {
-  id: number;
-  name: string;
-  type: string;
-  phase: string;
-  frozen: boolean;
-  durationSeconds: number;
-  startTimeSeconds?: number;
-  relativeTimeSeconds?: number;
-}
-
-interface CFContestListResponse {
-  status: 'OK' | 'FAILED';
-  result: CFContest[];
-}
-
-interface CFContestStandingsResponse {
-  status: 'OK' | 'FAILED';
-  result: {
-    contest: CFContest;
-    problems: Array<{
-      contestId: number;
-      index: string;
-      name: string;
-      type: string;
-      points?: number;
-      rating?: number;
-      tags: string[];
-    }>;
-    rows: any[];
-  };
-}
 
 /** GET /students/:id/contest-history - Get contest history for a student */
 export const getStudentContestHistory = async (
@@ -1458,5 +1492,42 @@ export const getStudentProblemSolving = async (
     } catch (error) {
       console.error('Error in getStudentProfile:', error);
       next(error);
+    }
+  };
+
+  export const toggleInactivityEmails = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { id } = req.params;
+      const { enabled } = req.body as { enabled: boolean };
+  
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ error: 'Invalid user ID' });
+      }
+  
+      if (typeof enabled !== 'boolean') {
+        return res.status(400).json({ error: '`enabled` must be boolean' });
+      }
+  
+      const updated = await User.findByIdAndUpdate(
+        id,
+        { 'emailNotifications.inactivityReminders': enabled },
+        { new: true, select: 'handle emailNotifications.inactivityReminders' }
+      ).lean();
+  
+      if (!updated) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+  
+      return res.json({
+        success: true,
+        handle: updated.handle,
+        inactivityEmailsEnabled: updated.emailNotifications?.inactivityReminders
+      });
+    } catch (err) {
+      next(err);
     }
   };

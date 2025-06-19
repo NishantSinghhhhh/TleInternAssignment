@@ -1,4 +1,3 @@
-// backend/src/services/cfSyncService.ts
 
 import axios from 'axios';
 import * as cron from 'node-cron';

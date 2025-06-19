@@ -1,5 +1,3 @@
-// backend/src/models/User.ts
-
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IUser extends Document {
@@ -30,14 +28,14 @@ export interface IUser extends Document {
 
   lastCfSync?: Date;
 
-  // Added for inactivity reminders
+  // track when they last submitted & how many reminders we’ve sent
   inactivityTracking?: {
     lastSubmissionDate?: Date;
     reminderCount: number;
     lastReminderSent?: Date;
   };
 
-  // Added for email notification preferences
+  // per-user on/off switch for inactivity‐reminder emails
   emailNotifications?: {
     inactivityReminders: boolean;
   };
@@ -74,9 +72,8 @@ const UserSchema: Schema<IUser> = new Schema(
       type: String,
       trim: true,
       sparse: true,
-      default: undefined, 
+      default: undefined,
     },
-    
     handle: {
       type: String,
       required: [true, 'Codeforces handle is required'],
@@ -92,63 +89,85 @@ const UserSchema: Schema<IUser> = new Schema(
         message: 'CF handle can only contain letters, numbers, underscore, and hyphen'
       }
     },
-    vkId: { type: String, trim: true },
-    openId: { type: String, trim: true },
-    firstName: { type: String, trim: true, maxlength: [50, 'First name cannot exceed 50 characters'] },
-    lastName: { type: String, trim: true, maxlength: [50, 'Last name cannot exceed 50 characters'] },
-    country: { type: String, trim: true, maxlength: [100, 'Country name cannot exceed 100 characters'] },
-    city: { type: String, trim: true, maxlength: [100, 'City name cannot exceed 100 characters'] },
+    vkId:         { type: String, trim: true },
+    openId:       { type: String, trim: true },
+    firstName:    { type: String, trim: true, maxlength: [50, 'First name cannot exceed 50 characters'] },
+    lastName:     { type: String, trim: true, maxlength: [50, 'Last name cannot exceed 50 characters'] },
+    country:      { type: String, trim: true, maxlength: [100, 'Country name cannot exceed 100 characters'] },
+    city:         { type: String, trim: true, maxlength: [100, 'City name cannot exceed 100 characters'] },
     organization: { type: String, trim: true, maxlength: [200, 'Organization name cannot exceed 200 characters'] },
     contribution: { type: Number, default: 0 },
     rank: {
       type: String,
       required: [true, 'Rank is required'],
       enum: [
-        'newbie','pupil','specialist','expert','candidate master','master','international master','grandmaster','international grandmaster','legendary grandmaster'
+        'newbie','pupil','specialist','expert','candidate master','master',
+        'international master','grandmaster','international grandmaster','legendary grandmaster'
       ],
       default: 'newbie'
     },
-    rating: { type: Number, required: [true, 'Rating is required'], min: [0, 'Rating cannot be negative'], max: [4000, 'Rating cannot exceed 4000'], default: 0 },
+    rating: {
+      type: Number,
+      required: [true, 'Rating is required'],
+      min: [0, 'Rating cannot be negative'],
+      max: [4000, 'Rating cannot exceed 4000'],
+      default: 0
+    },
     maxRank: {
       type: String,
       required: [true, 'Max rank is required'],
       enum: [
-        'newbie','pupil','specialist','expert','candidate master','master','international master','grandmaster','international grandmaster','legendary grandmaster'
+        'newbie','pupil','specialist','expert','candidate master','master',
+        'international master','grandmaster','international grandmaster','legendary grandmaster'
       ],
       default: 'newbie'
     },
-    maxRating: { type: Number, required: [true, 'Max rating is required'], min: [0, 'Max rating cannot be negative'], max: [4000, 'Max rating cannot exceed 4000'], default: 0 },
-    lastOnlineTimeSeconds: { type: Number, required: [true, 'Last online time is required'], min: [0, 'Last online time cannot be negative'] },
-    registrationTimeSeconds: { type: Number, required: [true, 'Registration time is required'], min: [0, 'Registration time cannot be negative'] },
-    friendOfCount: { type: Number, default: 0, min: [0, 'Friend count cannot be negative'] },
-    avatar: { type: String, required: [true, 'Avatar URL is required'], default: 'https://userpic.codeforces.org/no-avatar.jpg' },
-    titlePhoto: { type: String, default: '' },
-    
-    lastCfSync: { type: Date, default: null, index: true },
-
-    // New schema additions
-    inactivityTracking: {
-      lastSubmissionDate: Date,
-      reminderCount: { type: Number, default: 0 },
-      lastReminderSent: Date
+    maxRating: {
+      type: Number,
+      required: [true, 'Max rating is required'],
+      min: [0, 'Max rating cannot be negative'],
+      max: [4000, 'Max rating cannot exceed 4000'],
+      default: 0
     },
+    lastOnlineTimeSeconds:   { type: Number, required: true, min: 0 },
+    registrationTimeSeconds: { type: Number, required: true, min: 0 },
+    friendOfCount:           { type: Number, default: 0, min: 0 },
+    avatar:                  { type: String, required: true, default: 'https://userpic.codeforces.org/no-avatar.jpg' },
+    titlePhoto:              { type: String, default: '' },
+    lastCfSync:              { type: Date, default: null, index: true },
+
+    // --- NEW FIELDS ---
+    inactivityTracking: {
+      lastSubmissionDate: { type: Date },
+      reminderCount:       { type: Number, default: 0 },
+      lastReminderSent:    { type: Date },
+    },
+
     emailNotifications: {
-      inactivityReminders: { type: Boolean, default: true }
-    }
+      inactivityReminders: { type: Boolean, default: false },
+    },
   },
   {
     timestamps: true,
     toJSON: {
-      transform: function(doc, ret) {
+      transform(doc, ret) {
         ret._id = ret._id.toString();
         if (ret.lastCfSync) ret.lastCfSync = ret.lastCfSync.toISOString();
+        if (ret.inactivityTracking?.lastSubmissionDate) {
+          ret.inactivityTracking.lastSubmissionDate =
+            ret.inactivityTracking.lastSubmissionDate.toISOString();
+        }
+        if (ret.inactivityTracking?.lastReminderSent) {
+          ret.inactivityTracking.lastReminderSent =
+            ret.inactivityTracking.lastReminderSent.toISOString();
+        }
         return ret;
       }
     }
   }
 );
 
-// Indexes for better query performance
+// Indexes
 UserSchema.index({ handle: 1 });
 UserSchema.index({ rating: -1 });
 UserSchema.index({ maxRating: -1 });
@@ -156,35 +175,33 @@ UserSchema.index({ rank: 1 });
 UserSchema.index({ country: 1 });
 UserSchema.index({ createdAt: -1 });
 UserSchema.index({ lastCfSync: -1 });
-// Compound indexes
 UserSchema.index({ rating: -1, rank: 1 });
 UserSchema.index({ country: 1, rating: -1 });
 UserSchema.index({ lastCfSync: -1 });
 
-// Pre-save middleware to handle empty strings
+// Clean up empty strings, lowercase handle, enforce maxRating ≥ rating
 UserSchema.pre('save', function(next) {
-  if (this.email === '') this.email = undefined;
-  if (this.phone === '') this.phone = undefined;
-  if (this.handle) this.handle = this.handle.toLowerCase();
+  if (this.email === '')    this.email = undefined;
+  if (this.phone === '')    this.phone = undefined;
+  if (this.handle)          this.handle = this.handle.toLowerCase();
   if (this.rating > this.maxRating) this.maxRating = this.rating;
   next();
 });
 
-// Pre-update middleware
-UserSchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], function(next) {
-  const update = this.getUpdate() as any;
-  if (update) {
-    if (update.email === '') update.email = undefined;
-    if (update.phone === '') update.phone = undefined;
-    if (update.$set) {
-      if (update.$set.email === '') update.$set.email = undefined;
-      if (update.$set.phone === '') update.$set.phone = undefined;
-    }
+// Handle the same on updates
+UserSchema.pre(['findOneAndUpdate','updateOne','updateMany'], function(next) {
+  const u = this.getUpdate() as any;
+  if (!u) return next();
+  if (u.email === '') u.email = undefined;
+  if (u.phone === '') u.phone = undefined;
+  if (u.$set) {
+    if (u.$set.email === '') u.$set.email = undefined;
+    if (u.$set.phone === '') u.$set.phone = undefined;
   }
   next();
 });
 
-// Instance methods
+// Instance helpers
 UserSchema.methods.getFullName = function(): string {
   return this.firstName && this.lastName
     ? `${this.firstName} ${this.lastName}`
@@ -205,15 +222,13 @@ UserSchema.methods.getRatingColor = function(): string {
   return '#808080';
 };
 
-// Static methods
+// Static queries
 UserSchema.statics.findByRatingRange = function(min: number, max: number) {
   return this.find({ rating: { $gte: min, $lte: max } }).sort({ rating: -1 });
 };
-
 UserSchema.statics.findByRank = function(rank: string) {
   return this.find({ rank }).sort({ rating: -1 });
 };
-
 UserSchema.statics.findByCountry = function(country: string) {
   return this.find({ country }).sort({ rating: -1 });
 };

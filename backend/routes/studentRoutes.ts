@@ -22,7 +22,10 @@ import {
 
   getStudentProfile,
   getStudentContestHistory,
-  getStudentProblemSolving
+  getStudentProblemSolving, 
+
+  toggleInactivityEmails
+  
 } from '../controllers/UserController';
 
 const router = Router();
@@ -56,5 +59,7 @@ router.get('/:id/problem-solving', getStudentProblemSolving);
 router.get('/:id', getStudentById);
 
 router.delete('/:id', deleteStudent);
+
+router.patch( '/:id/notifications/inactivity', toggleInactivityEmails);
 
 export default router;

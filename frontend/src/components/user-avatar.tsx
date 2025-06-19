@@ -4,7 +4,7 @@ interface UserAvatarProps {
     handle: string
   }
   
-  export function UserAvatar({ src, alt, handle }: UserAvatarProps) {
+  export function UserAvatar({ src, alt }: UserAvatarProps) {
     return (
       <img
         src={src || "https://userpic.codeforces.org/no-avatar.jpg"}

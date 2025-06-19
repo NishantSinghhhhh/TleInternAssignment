@@ -1,4 +1,4 @@
-// backend/src/controllers/emailController.ts - Add new endpoint
+// backend/src/controllers/emailController.ts
 
 import { Request, Response, NextFunction } from 'express';
 import EmailService from '../services/emailService';

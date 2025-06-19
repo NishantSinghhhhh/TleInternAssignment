@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { X, User, Mail, Phone, Globe, MapPin, Building2, Save, RotateCcw } from "lucide-react"
+import { X, User, Mail, Globe, MapPin, Save, RotateCcw } from "lucide-react"
 
 interface AddUserModalProps {
   isOpen: boolean
@@ -176,15 +176,15 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-background rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-border">
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Add New Student</h2>
+              <h2 className="text-2xl font-bold text-foreground">Add New Student</h2>
               {hasStoredData && (
-                <p className="text-sm text-green-600 mt-1">
+                <p className="text-sm text-green-600 dark:text-green-400 mt-1">
                   📂 Form data restored from previous session
                 </p>
               )}
@@ -195,7 +195,7 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
                   <button
                     onClick={() => setShowClearConfirm(true)}
                     disabled={loading}
-                    className="p-2 hover:bg-red-50 text-red-600 rounded-full transition-colors disabled:opacity-50"
+                    className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full transition-colors disabled:opacity-50"
                     title="Clear saved data"
                   >
                     <RotateCcw className="w-4 h-4" />
@@ -205,27 +205,27 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
               <button
                 onClick={handleClose}
                 disabled={loading}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
+                className="p-2 hover:bg-accent rounded-full transition-colors disabled:opacity-50"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 text-foreground" />
               </button>
             </div>
           </div>
 
           {/* Clear confirmation dialog */}
           {showClearConfirm && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-red-800">Clear saved form data?</p>
-                  <p className="text-xs text-red-600 mt-1">This will reset all fields and remove saved data.</p>
+                  <p className="text-sm font-medium text-red-800 dark:text-red-200">Clear saved form data?</p>
+                  <p className="text-xs text-red-600 dark:text-red-300 mt-1">This will reset all fields and remove saved data.</p>
                 </div>
                 <div className="flex space-x-2">
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => setShowClearConfirm(false)}
-                    className="text-gray-600"
+                    className="text-muted-foreground"
                   >
                     Cancel
                   </Button>
@@ -245,22 +245,22 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Required Fields */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+              <h3 className="text-lg font-semibold text-foreground flex items-center">
                 <User className="w-5 h-5 mr-2" />
                 Required Information
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Full Name *
                   </label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors.name ? "border-red-500" : "border-gray-300"
+                    className={`w-full px-3 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground ${
+                      errors.name ? "border-red-500" : "border-border"
                     }`}
                     placeholder="Enter full name"
                     disabled={loading}
@@ -269,15 +269,15 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Codeforces Handle *
                   </label>
                   <input
                     type="text"
                     value={formData.handle}
                     onChange={(e) => handleInputChange("handle", e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors.handle ? "border-red-500" : "border-gray-300"
+                    className={`w-full px-3 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground ${
+                      errors.handle ? "border-red-500" : "border-border"
                     }`}
                     placeholder="Enter CF handle"
                     disabled={loading}
@@ -289,22 +289,22 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
 
             {/* Contact Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+              <h3 className="text-lg font-semibold text-foreground flex items-center">
                 <Mail className="w-5 h-5 mr-2" />
                 Contact Information
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Email
                   </label>
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors.email ? "border-red-500" : "border-gray-300"
+                    className={`w-full px-3 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground ${
+                      errors.email ? "border-red-500" : "border-border"
                     }`}
                     placeholder="Enter email address"
                     disabled={loading}
@@ -313,14 +313,14 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Phone
                   </label>
                   <input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => handleInputChange("phone", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
                     placeholder="Enter phone number"
                     disabled={loading}
                   />
@@ -330,35 +330,35 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
 
             {/* Personal Details */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+              <h3 className="text-lg font-semibold text-foreground flex items-center">
                 <User className="w-5 h-5 mr-2" />
                 Personal Details
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     First Name
                   </label>
                   <input
                     type="text"
                     value={formData.firstName}
                     onChange={(e) => handleInputChange("firstName", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
                     placeholder="Enter first name"
                     disabled={loading}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Last Name
                   </label>
                   <input
                     type="text"
                     value={formData.lastName}
                     onChange={(e) => handleInputChange("lastName", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
                     placeholder="Enter last name"
                     disabled={loading}
                   />
@@ -368,49 +368,49 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
 
             {/* Location & Organization */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+              <h3 className="text-lg font-semibold text-foreground flex items-center">
                 <MapPin className="w-5 h-5 mr-2" />
                 Location & Organization
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Country
                   </label>
                   <input
                     type="text"
                     value={formData.country}
                     onChange={(e) => handleInputChange("country", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
                     placeholder="Enter country"
                     disabled={loading}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     City
                   </label>
                   <input
                     type="text"
                     value={formData.city}
                     onChange={(e) => handleInputChange("city", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
                     placeholder="Enter city"
                     disabled={loading}
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Organization
                   </label>
                   <input
                     type="text"
                     value={formData.organization}
                     onChange={(e) => handleInputChange("organization", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
                     placeholder="Enter organization/school/company"
                     disabled={loading}
                   />
@@ -419,7 +419,7 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-between pt-6 border-t">
+            <div className="flex justify-between pt-6 border-t border-border">
               <div className="flex space-x-2">
                 {hasStoredData && (
                   <Button
@@ -427,7 +427,7 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
                     variant="outline"
                     onClick={resetForm}
                     disabled={loading}
-                    className="px-4 text-gray-600"
+                    className="px-4 text-muted-foreground"
                   >
                     <RotateCcw className="w-4 h-4 mr-2" />
                     Reset Form
@@ -448,7 +448,7 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="px-6 bg-blue-600 hover:bg-blue-700"
+                  className="px-6 bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   {loading ? (
                     <>
@@ -468,12 +468,12 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
 
           {/* Info Notes */}
           <div className="mt-6 space-y-3">
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
               <div className="flex items-start">
-                <Globe className="w-5 h-5 text-blue-600 mr-2 mt-0.5" />
-                <div className="text-sm text-blue-800">
+                <Globe className="w-5 h-5 text-primary mr-2 mt-0.5" />
+                <div className="text-sm text-foreground">
                   <p className="font-medium mb-1">Automatic Data Fetching</p>
-                  <p>
+                  <p className="text-muted-foreground">
                     When you provide a valid Codeforces handle, we'll automatically fetch additional information 
                     like rating, rank, and other profile details from Codeforces. Any missing information will 
                     be filled in automatically if available.
@@ -483,12 +483,12 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
             </div>
 
             {hasStoredData && (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
                 <div className="flex items-start">
-                  <Save className="w-5 h-5 text-green-600 mr-2 mt-0.5" />
-                  <div className="text-sm text-green-800">
+                  <Save className="w-5 h-5 text-green-600 dark:text-green-400 mr-2 mt-0.5" />
+                  <div className="text-sm text-foreground">
                     <p className="font-medium mb-1">Form Data Saved</p>
-                    <p>
+                    <p className="text-muted-foreground">
                       Your form data is automatically saved locally and will be restored when you reopen this modal. 
                       Use the reset button to clear saved data if needed.
                     </p>

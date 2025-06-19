@@ -15,13 +15,15 @@ import { EditUserModal } from "@/components/edit-user-modal"
 import { DeleteConfirmationModal } from "@/components/delete-confirmation-modal"
 import { StudentProfileModal } from "@/components/student-profile-modal"
 
-interface CFUser {
+// src/types/user.ts// Update your CFUser interface in the main page component to match the API response
+export interface CFUser {
   _id: string
   name: string
   email?: string
   phone?: string
-  cfHandle: string
-  currentRating: number
+  handle?: string         // Original handle field (might be empty)
+  cfHandle?: string       // This is what your API actually returns
+  rating: number          // Changed from currentRating to rating
   maxRating: number
   rank: string
   maxRank: string
@@ -33,7 +35,26 @@ interface CFUser {
   friendOfCount: number
   firstName?: string
   lastName?: string
-  activeLast7Days: boolean;
+  lastCfSync?: string | null
+  activeLast7Days: boolean
+  reminderCount?: number  // From your data output
+  inactivityEmailsEnabled?: boolean // From your data output
+  inactivityTracking?: {
+    lastSubmissionDate?: Date
+    reminderCount: number
+    lastReminderSent?: Date
+  }
+  emailNotifications?: {
+    inactivityReminders: boolean
+  }
+}
+
+interface EmailResponse {
+  success: boolean;
+  message: string;
+  user?: { handle: string; email: string; name: string };
+  timestamp?: string;
+  error?: string;
 }
 
 interface UserFormData {
@@ -139,25 +160,35 @@ export default function CPSheetPage() {
     }
   }
 
-  const fetchFromAPI = async () => {
-    setLoading(true)
-    setError(null)
-
+  const handleSendActivationMail = async (user: CFUser) => {
     try {
-      const res = await api.get<CFUser[]>('/students/fetch-100')
-      setUsers(res.data)
-      setAllUsers(res.data)
-      setCurrentPage(1)
-      setTotalPages(1)
-      setTotalCount(res.data.length)
-      console.log('Fetched from CF API:', res.data)
+      const payload = {
+        userId: user._id,
+        emailType: 'inactivity_reminder',
+        subject: 'Time to get back to competitive programming!',
+        message: `Hi ${user.name}, we noticed you haven't been active on Codeforces lately. Come back and continue your coding journey!`
+      };
+  
+      console.log('Sending email payload:', payload); // Debug log
+  
+      const { data } = await api.post<EmailResponse>('/email/send-to-user', payload);
+  
+      if (data.success) {
+        alert(`🔔 Reminder email sent to ${user.cfHandle || user.handle}!`);
+      } else {
+        alert(`⚠️ ${data.error ?? data.message}`);
+      }
     } catch (err: any) {
-      console.error('API fetch error:', err)
-      setError(err.response?.data?.message || err.message || 'Failed to load users from CF API')
-    } finally {
-      setLoading(false)
+      console.error('Error sending activation email:', err);
+      console.error('Response data:', err.response?.data); // More detailed error logging
+      
+      if (err.response?.data?.error) {
+        alert(`❌ ${err.response.data.error}`);
+      } else {
+        alert('❌ Failed to send reminder email');
+      }
     }
-  }
+  };
 
   const fetchAndSave = async () => {
     setLoading(true)
@@ -198,7 +229,7 @@ export default function CPSheetPage() {
     const searchTerm = query.toLowerCase().trim()
     const filtered = allUsers.filter(user => 
       user.name?.toLowerCase().includes(searchTerm) ||
-      user.cfHandle?.toLowerCase().includes(searchTerm) ||
+      user.handle?.toLowerCase().includes(searchTerm) ||
       user.country?.toLowerCase().includes(searchTerm) ||
       user.city?.toLowerCase().includes(searchTerm) ||
       user.organization?.toLowerCase().includes(searchTerm) ||
@@ -283,6 +314,58 @@ export default function CPSheetPage() {
     setIsProfileModalOpen(true)
   }
 
+  const toggleAutoEmail = async (userId: string, enabled: boolean) => {
+    try {
+      // Call the general student update endpoint with emailNotifications
+      const { data } = await api.put<{
+        message: string;
+        student: any; // Your formatted student type
+        changesDetected: boolean;
+        updatedFields?: string[];
+        changesSummary?: Array<{
+          field: string;
+          oldValue: any;
+          newValue: any;
+        }>;
+      }>(`/students/${userId}`, {
+        emailNotifications: {
+          inactivityReminders: enabled
+        }
+      });
+  
+      // Check if the update was successful
+      if (data.changesDetected || data.message.includes('No changes detected')) {
+        console.log(`✅ Auto-email setting updated for user ${userId}: ${enabled}`);
+        
+        // Reload the list to reflect the new value in UI
+        if (isSearchMode) {
+          await handleClearSearch();
+        } else {
+          await fetchFromDatabase(currentPage, pageSize);
+        }
+        
+        // Optional: Show success message
+        // You could use a toast notification instead of alert
+        console.log(`📧 Inactivity email reminders ${enabled ? 'enabled' : 'disabled'}`);
+        
+      } else {
+        console.warn('Update request completed but no changes were made');
+      }
+  
+    } catch (err: any) {
+      console.error('Error toggling auto email:', err);
+      
+      // Handle specific error cases
+      if (err.response?.status === 404) {
+        alert('❌ Student not found');
+      } else if (err.response?.status === 400) {
+        alert('❌ Invalid request format');
+      } else {
+        alert('❌ Failed to update auto-email setting');
+      }
+    }
+  };
+  
   const handleEditUser = async (userId: string, userData: UserUpdateData) => {
     setIsEditingUser(true)
     
@@ -387,9 +470,9 @@ export default function CPSheetPage() {
     ]
 
     const rows = dataToDownload.map((user) => [
-      user.cfHandle,
+      user.handle,
       user.name,
-      user.currentRating?.toString() || "",
+      user.rating?.toString() || "",
       user.maxRating?.toString() || "",
       user.rank || "",
       user.maxRank || "",
@@ -401,7 +484,7 @@ export default function CPSheetPage() {
     ])
 
     const csv = [header, ...rows]
-      .map((row) => row.map((field) => `"${field.replace(/"/g, '""')}"`).join(","))
+      .map((row) => row.map((field) => `"${(field ?? "").replace(/"/g, '""')}"`).join(","))
       .join("\n")
 
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
@@ -436,12 +519,11 @@ export default function CPSheetPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gray-50">
-  
+    <div className="min-h-screen bg-background">
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">CP-31 Sheet</h1>
-          <p className="text-gray-600">Comprehensive Codeforces user database with ratings, rankings, and statistics</p>
+          <h1 className="text-4xl font-bold text-foreground mb-2">Users Data</h1>
+          <p className="text-muted-foreground">Comprehensive Codeforces user database with ratings, rankings, and statistics</p>
         </div>
 
         <SearchBar
@@ -469,29 +551,28 @@ export default function CPSheetPage() {
               loading={loading}
             />
 
-              <PaginationInfo
-                currentPage={currentPage}
-                pageSize={pageSize}
-                totalCount={totalCount}
-                onPageSizeChange={handlePageSizeChange}
-              />
-
+            <PaginationInfo
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalCount={totalCount}
+              onPageSizeChange={handlePageSizeChange}
+            />
 
             <UsersTable 
               users={users} 
               onEdit={handleEdit}
               onDelete={handleDelete}
               onViewProfile={handleViewProfile}
+              onSendActivationMail={handleSendActivationMail}
+              onToggleInactivityEmails={toggleAutoEmail} // Add this line
               loading={loading || isEditingUser || isDeletingUser}
             />
 
-     
-              <PaginationControls 
-                currentPage={currentPage} 
-                totalPages={totalPages} 
-                onPageChange={handlePageChange} 
-              />
-          
+            <PaginationControls 
+              currentPage={currentPage} 
+              totalPages={totalPages} 
+              onPageChange={handlePageChange} 
+            />
 
             <StatisticsCards 
               users={users} 

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { 
   RefreshCw, 
   Clock, 
-  Settings, 
   Play, 
   CheckCircle, 
   XCircle, 
@@ -16,9 +15,6 @@ import {
   Calendar,
   Zap,
   TrendingUp,
-  BarChart3,
-  ChevronDown,
-  ChevronUp
 } from "lucide-react"
 
 interface SyncSettings {
@@ -81,14 +77,13 @@ interface UserSyncStatus {
 
 export function SyncDashboard() {
   const [syncData, setSyncData] = useState<SyncData | null>(null)
-  const [syncLogs, setSyncLogs] = useState<SyncLog[]>([])
+  const [syncLogs,setSyncLogs] = useState<SyncLog[]>([])
   const [usersSyncStatus, setUsersSyncStatus] = useState<UserSyncStatus[]>([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'logs' | 'users' | 'settings'>('overview')
-  const [expandedSettings, setExpandedSettings] = useState(false)
-
+ 
   const api = {
     get: async (url: string) => {
       const response = await fetch(`http://localhost:8000${url}`)
@@ -115,6 +110,9 @@ export function SyncDashboard() {
     }
   }
 
+  if(syncLogs){
+    
+  }
   const fetchSyncStatus = async () => {
     try {
       setLoading(true)
@@ -199,9 +197,9 @@ export function SyncDashboard() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="bg-background rounded-lg border border-border p-6">
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       </div>
     )
@@ -209,11 +207,11 @@ export function SyncDashboard() {
 
   if (error || !syncData) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="bg-background rounded-lg border border-border p-6">
         <div className="text-center">
           <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Sync Dashboard</h3>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <h3 className="text-lg font-semibold text-foreground mb-2">Error Loading Sync Dashboard</h3>
+          <p className="text-muted-foreground mb-4">{error}</p>
           <Button onClick={fetchSyncStatus} variant="outline">
             <RefreshCw className="w-4 h-4 mr-2" />
             Retry
@@ -227,18 +225,18 @@ export function SyncDashboard() {
 
   const getStatusIcon = () => {
     if (status.isRunning || syncing) {
-      return <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
+      return <RefreshCw className="w-5 h-5 text-primary animate-spin" />
     }
     
     switch (status.lastSyncStatus) {
       case 'success':
-        return <CheckCircle className="w-5 h-5 text-green-600" />
+        return <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
       case 'failed':
-        return <XCircle className="w-5 h-5 text-red-600" />
+        return <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
       case 'partial':
-        return <AlertCircle className="w-5 h-5 text-yellow-600" />
+        return <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
       default:
-        return <Clock className="w-5 h-5 text-gray-600" />
+        return <Clock className="w-5 h-5 text-muted-foreground" />
     }
   }
 
@@ -287,13 +285,13 @@ export function SyncDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="bg-background rounded-lg border border-border p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             {getStatusIcon()}
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Sync Dashboard</h1>
-              <p className="text-sm text-gray-600">{getStatusText()}</p>
+              <h1 className="text-2xl font-bold text-foreground">Sync Dashboard</h1>
+              <p className="text-sm text-muted-foreground">{getStatusText()}</p>
             </div>
           </div>
           
@@ -322,64 +320,63 @@ export function SyncDashboard() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
           <div className="flex items-center">
-            <Users className="w-8 h-8 text-blue-600 mr-3" />
+            <Users className="w-8 h-8 text-blue-600 dark:text-blue-400 mr-3" />
             <div>
-              <div className="text-2xl font-bold text-blue-700">{statistics.totalUsers}</div>
-              <div className="text-sm text-blue-600">Total Users</div>
+              <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">{statistics.totalUsers}</div>
+              <div className="text-sm text-blue-600 dark:text-blue-400">Total Users</div>
             </div>
           </div>
         </div>
 
-        <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
           <div className="flex items-center">
-            <CheckCircle className="w-8 h-8 text-green-600 mr-3" />
+            <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400 mr-3" />
             <div>
-              <div className="text-2xl font-bold text-green-700">{status.usersSynced}</div>
-              <div className="text-sm text-green-600">Last Synced</div>
+              <div className="text-2xl font-bold text-green-700 dark:text-green-300">{status.usersSynced}</div>
+              <div className="text-sm text-green-600 dark:text-green-400">Last Synced</div>
             </div>
           </div>
         </div>
 
-        <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
           <div className="flex items-center">
-            <AlertCircle className="w-8 h-8 text-yellow-600 mr-3" />
+            <AlertCircle className="w-8 h-8 text-yellow-600 dark:text-yellow-400 mr-3" />
             <div>
-              <div className="text-2xl font-bold text-yellow-700">{status.usersFailed}</div>
-              <div className="text-sm text-yellow-600">Failed</div>
+              <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{status.usersFailed}</div>
+              <div className="text-sm text-yellow-600 dark:text-yellow-400">Failed</div>
             </div>
           </div>
         </div>
 
-        <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+        <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
           <div className="flex items-center">
-            <TrendingUp className="w-8 h-8 text-purple-600 mr-3" />
+            <TrendingUp className="w-8 h-8 text-purple-600 dark:text-purple-400 mr-3" />
             <div>
-              <div className="text-2xl font-bold text-purple-700">{statistics.totalSyncs}</div>
-              <div className="text-sm text-purple-600">Total Syncs</div>
+              <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">{statistics.totalSyncs}</div>
+              <div className="text-sm text-purple-600 dark:text-purple-400">Total Syncs</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="bg-white rounded-lg border border-gray-200">
-        <div className="border-b border-gray-200">
+      <div className="bg-background rounded-lg border border-border">
+        <div className="border-b border-border">
           <nav className="flex space-x-8 px-6">
             {[
               { id: 'overview', label: 'Overview', icon: Activity },
-              { id: 'logs', label: 'Sync Logs', icon: BarChart3 },
               { id: 'users', label: 'User Status', icon: Users },
-              { id: 'settings', label: 'Settings', icon: Settings }
+    
             ].map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id as any)}
                 className={`flex items-center py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
                 }`}
               >
                 <Icon className="w-4 h-4 mr-2" />
@@ -396,53 +393,53 @@ export function SyncDashboard() {
               {/* Sync Schedule */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center">
                     <Calendar className="w-5 h-5 mr-2" />
                     Sync Schedule
                   </h3>
                   <div className="space-y-3">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Status:</span>
-                      <span className={`font-medium ${settings.enabled ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className="text-muted-foreground">Status:</span>
+                      <span className={`font-medium ${settings.enabled ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {settings.enabled ? 'Enabled' : 'Disabled'}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Schedule:</span>
-                      <span className="font-medium">{settings.cronTime}</span>
+                      <span className="text-muted-foreground">Schedule:</span>
+                      <span className="font-medium text-foreground">{settings.cronTime}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Frequency:</span>
-                      <span className="font-medium capitalize">{settings.frequency}</span>
+                      <span className="text-muted-foreground">Frequency:</span>
+                      <span className="font-medium text-foreground capitalize">{settings.frequency}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Next Run:</span>
-                      <span className="font-medium">{formatNextRun(status.nextRunTime)}</span>
+                      <span className="text-muted-foreground">Next Run:</span>
+                      <span className="font-medium text-foreground">{formatNextRun(status.nextRunTime)}</span>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center">
                     <Clock className="w-5 h-5 mr-2" />
                     Last Sync
                   </h3>
                   <div className="space-y-3">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Started:</span>
-                      <span className="font-medium">{formatDate(status.lastSyncStart)}</span>
+                      <span className="text-muted-foreground">Started:</span>
+                      <span className="font-medium text-foreground">{formatDate(status.lastSyncStart)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Completed:</span>
-                      <span className="font-medium">{formatDate(status.lastSyncEnd)}</span>
+                      <span className="text-muted-foreground">Completed:</span>
+                      <span className="font-medium text-foreground">{formatDate(status.lastSyncEnd)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Duration:</span>
-                      <span className="font-medium">{statistics.avgSyncDuration}s avg</span>
+                      <span className="text-muted-foreground">Duration:</span>
+                      <span className="font-medium text-foreground">{statistics.avgSyncDuration}s avg</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Success Rate:</span>
-                      <span className="font-medium">
+                      <span className="text-muted-foreground">Success Rate:</span>
+                      <span className="font-medium text-foreground">
                         {status.usersSynced > 0 
                           ? Math.round((status.usersSynced / (status.usersSynced + status.usersFailed)) * 100)
                           : 0}%
@@ -454,68 +451,14 @@ export function SyncDashboard() {
 
               {/* Error Display */}
               {status.lastSyncError && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
                   <div className="flex items-start">
-                    <XCircle className="w-5 h-5 text-red-600 mr-2 mt-0.5" />
+                    <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 mr-2 mt-0.5" />
                     <div>
-                      <h4 className="font-medium text-red-800">Last Sync Error</h4>
-                      <p className="text-red-700 text-sm mt-1">{status.lastSyncError}</p>
+                      <h4 className="font-medium text-red-800 dark:text-red-300">Last Sync Error</h4>
+                      <p className="text-red-700 dark:text-red-300 text-sm mt-1">{status.lastSyncError}</p>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Sync Logs Tab */}
-          {activeTab === 'logs' && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Recent Sync History</h3>
-                <Button onClick={fetchSyncLogs} variant="outline" size="sm">
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Refresh
-                </Button>
-              </div>
-              
-              {syncLogs.length > 0 ? (
-                <div className="space-y-3">
-                  {syncLogs.map((log) => (
-                    <div key={log._id} className="bg-gray-50 rounded-lg p-4 border">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          {log.lastSyncStatus === 'success' && <CheckCircle className="w-4 h-4 text-green-600" />}
-                          {log.lastSyncStatus === 'failed' && <XCircle className="w-4 h-4 text-red-600" />}
-                          {log.lastSyncStatus === 'partial' && <AlertCircle className="w-4 h-4 text-yellow-600" />}
-                          <span className="font-medium capitalize">{log.lastSyncStatus}</span>
-                        </div>
-                        <span className="text-sm text-gray-600">{formatDate(log.lastSyncStart)}</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-600">Synced:</span>
-                          <span className="font-medium text-green-700 ml-1">{log.usersSynced}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Skipped:</span>
-                          <span className="font-medium text-yellow-700 ml-1">{log.usersSkipped}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Failed:</span>
-                          <span className="font-medium text-red-700 ml-1">{log.usersFailed}</span>
-                        </div>
-                      </div>
-                      {log.lastSyncError && (
-                        <div className="mt-2 text-sm text-red-600">
-                          Error: {log.lastSyncError}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  No sync logs available
                 </div>
               )}
             </div>
@@ -525,7 +468,7 @@ export function SyncDashboard() {
           {activeTab === 'users' && (
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">User Sync Status</h3>
+                <h3 className="text-lg font-semibold text-foreground">User Sync Status</h3>
                 <Button onClick={fetchUsersSyncStatus} variant="outline" size="sm">
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Refresh
@@ -535,28 +478,28 @@ export function SyncDashboard() {
               {usersSyncStatus.length > 0 ? (
                 <div className="space-y-2">
                   {usersSyncStatus.map((user) => (
-                    <div key={user._id} className="bg-gray-50 rounded-lg p-4 border">
+                    <div key={user._id} className="bg-muted/30 rounded-lg p-4 border border-border">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-3">
                             <div>
-                              <div className="font-medium text-gray-900">{user.name}</div>
-                              <div className="text-sm text-gray-600">@{user.handle}</div>
+                              <div className="font-medium text-foreground">{user.name}</div>
+                              <div className="text-sm text-muted-foreground">@{user.handle}</div>
                             </div>
                             <div className="text-sm">
-                              <span className="text-gray-600">Rating:</span>
-                              <span className="font-medium ml-1">{user.rating}</span>
+                              <span className="text-muted-foreground">Rating:</span>
+                              <span className="font-medium text-foreground ml-1">{user.rating}</span>
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center space-x-3">
                           <div className="text-right">
                             <div className={`text-sm font-medium ${
-                              user.needsSync ? 'text-red-600' : 'text-green-600'
+                              user.needsSync ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
                             }`}>
                               {formatSyncAge(user.syncAge)}
                             </div>
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-muted-foreground">
                               {user.needsSync ? 'Needs sync' : 'Up to date'}
                             </div>
                           </div>
@@ -575,61 +518,13 @@ export function SyncDashboard() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-muted-foreground">
                   No users found
                 </div>
               )}
             </div>
           )}
 
-          {/* Settings Tab */}
-          {activeTab === 'settings' && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Sync Configuration</h3>
-                <Button 
-                  onClick={() => setExpandedSettings(!expandedSettings)}
-                  variant="outline" 
-                  size="sm"
-                >
-                  {expandedSettings ? <ChevronUp className="w-4 h-4 mr-2" /> : <ChevronDown className="w-4 h-4 mr-2" />}
-                  {expandedSettings ? 'Collapse' : 'Expand'}
-                </Button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="text-sm text-gray-600">Batch Size</div>
-                  <div className="text-xl font-bold text-gray-900">{settings.batchSize}</div>
-                </div>
-                
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="text-sm text-gray-600">Delay Between Batches</div>
-                  <div className="text-xl font-bold text-gray-900">{settings.delayBetweenBatches}ms</div>
-                </div>
-                
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="text-sm text-gray-600">Timezone</div>
-                  <div className="text-xl font-bold text-gray-900">{settings.timezone}</div>
-                </div>
-              </div>
-
-              {expandedSettings && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex items-start">
-                    <Settings className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-yellow-800">Settings Configuration</h4>
-                      <p className="text-yellow-700 text-sm mt-1">
-                        Advanced sync settings can be configured through the API or admin panel. 
-                        Contact your administrator to modify cron schedule, batch settings, or timezone.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>

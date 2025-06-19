@@ -4,12 +4,38 @@
 import { Button } from "@/components/ui/button"
 import { AlertTriangle, X } from "lucide-react"
 
-interface CFUser {
+// Update your CFUser interface in the main page component to match the API response
+export interface CFUser {
   _id: string
   name: string
-  cfHandle: string
-  currentRating: number
+  email?: string
+  phone?: string
+  handle?: string         // Original handle field (might be empty)
+  cfHandle?: string       // This is what your API actually returns
+  rating: number          // Changed from currentRating to rating
+  maxRating: number
   rank: string
+  maxRank: string
+  country?: string
+  city?: string
+  organization?: string
+  avatar: string
+  contribution: number
+  friendOfCount: number
+  firstName?: string
+  lastName?: string
+  lastCfSync?: string | null
+  activeLast7Days: boolean
+  reminderCount?: number  // From your data output
+  inactivityEmailsEnabled?: boolean // From your data output
+  inactivityTracking?: {
+    lastSubmissionDate?: Date
+    reminderCount: number
+    lastReminderSent?: Date
+  }
+  emailNotifications?: {
+    inactivityReminders: boolean
+  }
 }
 
 interface DeleteConfirmationModalProps {
@@ -43,62 +69,62 @@ export function DeleteConfirmationModal({
   if (!isOpen || !user) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-background rounded-lg shadow-xl max-w-md w-full border border-border">
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
-              <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-red-600" />
+              <div className="flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
               </div>
-              <h2 className="ml-3 text-lg font-semibold text-gray-900">
+              <h2 className="ml-3 text-lg font-semibold text-foreground">
                 Delete Student
               </h2>
             </div>
             <button
               onClick={handleClose}
               disabled={loading}
-              className="p-1 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
+              className="p-1 hover:bg-accent rounded-full transition-colors disabled:opacity-50"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 text-foreground" />
             </button>
           </div>
 
           {/* Content */}
           <div className="mb-6">
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               Are you sure you want to delete this student? This action cannot be undone.
             </p>
             
             {/* User Details */}
-            <div className="bg-gray-50 rounded-lg p-4 border">
+            <div className="bg-muted/30 rounded-lg p-4 border border-border">
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-sm font-medium text-gray-700">Name:</span>
-                  <span className="text-sm text-gray-900">{user.name}</span>
+                  <span className="text-sm font-medium text-muted-foreground">Name:</span>
+                  <span className="text-sm text-foreground">{user.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm font-medium text-gray-700">Handle:</span>
-                  <span className="text-sm text-gray-900">{user.cfHandle}</span>
+                  <span className="text-sm font-medium text-muted-foreground">Handle:</span>
+                  <span className="text-sm text-foreground">{user.handle}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm font-medium text-gray-700">Rating:</span>
-                  <span className="text-sm text-gray-900">{user.currentRating}</span>
+                  <span className="text-sm font-medium text-muted-foreground">Rating:</span>
+                  <span className="text-sm text-foreground">{user.rating}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm font-medium text-gray-700">Rank:</span>
-                  <span className="text-sm text-gray-900 capitalize">{user.rank}</span>
+                  <span className="text-sm font-medium text-muted-foreground">Rank:</span>
+                  <span className="text-sm text-foreground capitalize">{user.rank}</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Warning Message */}
-          <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="mb-6 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
             <div className="flex">
-              <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 mr-2" />
-              <div className="text-sm text-red-700">
+              <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 mr-2" />
+              <div className="text-sm text-red-700 dark:text-red-300">
                 <p className="font-medium">Warning</p>
                 <p>This will permanently remove the student from your database. All associated data will be lost.</p>
               </div>
