@@ -28,6 +28,27 @@ interface CFUserInfo {
   titlePhoto: string;
 }
 
+interface Problem {
+    contestId?: number;
+    index: string;
+    name: string;
+    rating?: number;
+    tags: string[];
+  }
+  
+  interface Submission {
+    id: number;
+    contestId?: number;
+    problem: Problem;
+    verdict: string;
+    // Add other relevant fields as needed
+  }
+  
+  interface CFContestResponse {
+    status: string;
+    result: Submission[];
+  }
+  
 // CF API responses
 interface CFRatedListResponse {
   status: 'OK' | 'FAILED';
@@ -164,57 +185,81 @@ export const fetchStudentDetails = async (
     console.log('📚 Fetching students from database...');
     
     // Parse page & limit, with sane defaults
-    const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
-    const limit = Math.max(1, parseInt((req.query.limit as string) || '10', 10));
-    const skip = (page - 1) * limit;
+    const page  = Math.max(1, parseInt((req.query.page  as string) || '1', 10))
+    const limit = Math.max(1, parseInt((req.query.limit as string) || '10', 10))
+    const skip  = (page - 1) * limit
     
-    // Fetch total count + paged data in parallel
-    const [totalCount, students] = await Promise.all([
+    // 1) Fetch count + page of users
+    const [ totalCount, students ] = await Promise.all([
       User.countDocuments(),
       User.find()
         .skip(skip)
         .limit(limit)
         .lean()
-    ]);
+    ])
+    console.log(`→ total students: ${totalCount}, returning ${students.length} on page ${page}`)
     
-    console.log(`→ total students: ${totalCount}, returning ${students.length} on page ${page}`);
+    // 2) Prepare CF status requests to check practice solves
+    const cutoffSec = Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60
+    const statusPromises = students.map(s =>
+      axios.get<{
+        status: 'OK' | 'FAILED'
+        result: Array<{ verdict: string; creationTimeSeconds: number }>
+      }>(`https://codeforces.com/api/user.status?handle=${encodeURIComponent(s.handle)}`)
+    )
+    const statusResults = await Promise.allSettled(statusPromises)
     
-    // Map to frontend shape
-    const formattedStudents = students.map(student => ({
-      _id: student._id.toString(),
-      name: student.name,
-      email: student.email || '',
-      phone: student.phone || '',
-      cfHandle: student.handle,
-      currentRating: student.rating,
-      maxRating: student.maxRating,
-      // Extra CF fields
-      rank: student.rank,
-      maxRank: student.maxRank,
-      country: student.country,
-      city: student.city,
-      organization: student.organization,
-      avatar: student.avatar,
-      contribution: student.contribution,
-      friendOfCount: student.friendOfCount,
-      firstName: student.firstName,
-      lastName: student.lastName,
-    }));
+    // 3) Map into your frontend shape + activeLast7Days
+    const formattedStudents = students.map((student, idx) => {
+      let activeLast7Days = false
+      
+      const stat = statusResults[idx]
+      if (stat.status === 'fulfilled' && stat.value.data.status === 'OK') {
+        activeLast7Days = stat.value.data.result
+          .some(sub => 
+            sub.verdict === 'OK' &&
+            sub.creationTimeSeconds >= cutoffSec
+          )
+      }
+      
+      return {
+        _id: student._id.toString(),
+        name: student.name,
+        email: student.email || '',
+        phone: student.phone || '',
+        cfHandle: student.handle,
+        vkId: student.vkId || '',
+        openId: student.openId || '',
+        firstName: student.firstName || '',
+        lastName: student.lastName || '',
+        country: student.country || '',
+        city: student.city || '',
+        organization: student.organization || '',
+        contribution: student.contribution,
+        rank: student.rank,
+        rating: student.rating,
+        maxRank: student.maxRank,
+        maxRating: student.maxRating,
+        friendOfCount: student.friendOfCount,
+        avatar: student.avatar || '',
+        titlePhoto: student.titlePhoto || '',
+        lastOnlineTimeSeconds: student.lastOnlineTimeSeconds,
+        registrationTimeSeconds: student.registrationTimeSeconds,
+        lastCfSync: student.lastCfSync || null,
+        createdAt: student.createdAt,
+        updatedAt: student.updatedAt,
+        // new flag:
+        activeLast7Days
+      }
+    })
     
-    // Calculate total pages
-    const totalPages = Math.ceil(totalCount / limit);
+    // 4) Send paginated response
+    const totalPages = Math.ceil(totalCount / limit)
+    res.json({ data: formattedStudents, page, limit, totalPages, totalCount })
     
-    // Send paginated response
-    res.json({
-      data: formattedStudents,
-      page,
-      limit,
-      totalPages,
-      totalCount,
-    });
   } catch (error) {
-    console.error('Error in fetchStudentDetails:', error);
-    next(error);
+    console.error('Error in fetchStudentDetails:', error)
+    next(error)
   }
 };
 
@@ -549,13 +594,85 @@ export const updateStudent = async (
       });
     }
 
-    const updateData = { ...req.body };
-    delete updateData._id; // Remove _id from update data
+    // First, get the current student data
+    const currentStudent = await User.findById(id).lean();
+    if (!currentStudent) {
+      return res.status(404).json({
+        error: 'Student not found'
+      });
+    }
 
-    // If handle is being updated, check for duplicates
-    if (updateData.handle) {
+    const incomingData = { ...req.body };
+    delete incomingData._id; // Remove _id from update data
+
+    // Convert empty strings to undefined for unique sparse fields
+    if (incomingData.email === '') {
+      incomingData.email = undefined;
+    }
+    if (incomingData.phone === '') {
+      incomingData.phone = undefined;
+    }
+
+    // Function to normalize values for comparison
+    const normalizeValue = (value: any) => {
+      if (value === '' || value === null) return undefined;
+      return value;
+    };
+
+    // Detect changes by comparing current vs incoming data
+    const changedFields: { [key: string]: any } = {};
+    const fieldsToCheck = [
+      'name', 'email', 'phone', 'handle', 'firstName', 'lastName', 
+      'country', 'city', 'organization'
+    ];
+
+    fieldsToCheck.forEach(field => {
+      const currentValue = normalizeValue(currentStudent[field]);
+      const incomingValue = normalizeValue(incomingData[field]);
+      
+      // Compare values (handle undefined/null/empty string equivalency)
+      if (currentValue !== incomingValue) {
+        changedFields[field] = incomingValue;
+        console.log(`🔄 Field '${field}' changed: '${currentValue}' → '${incomingValue}'`);
+      }
+    });
+
+    // If no fields have changed, return early
+    if (Object.keys(changedFields).length === 0) {
+      console.log(`⚡ No changes detected for student: ${currentStudent.handle}`);
+      
+      // Return current student data
+      const formattedStudent = {
+        _id: currentStudent._id.toString(),
+        name: currentStudent.name,
+        email: currentStudent.email || '',
+        phone: currentStudent.phone || '',
+        cfHandle: currentStudent.handle,
+        currentRating: currentStudent.rating,
+        maxRating: currentStudent.maxRating,
+        rank: currentStudent.rank,
+        maxRank: currentStudent.maxRank,
+        country: currentStudent.country,
+        city: currentStudent.city,
+        organization: currentStudent.organization,
+        avatar: currentStudent.avatar,
+        contribution: currentStudent.contribution,
+        friendOfCount: currentStudent.friendOfCount,
+        firstName: currentStudent.firstName,
+        lastName: currentStudent.lastName,
+      };
+
+      return res.json({
+        message: 'No changes detected - student data unchanged',
+        student: formattedStudent,
+        changesDetected: false
+      });
+    }
+
+    // Validate unique constraints for changed fields
+    if (changedFields.handle) {
       const existingUser = await User.findOne({ 
-        handle: updateData.handle, 
+        handle: changedFields.handle, 
         _id: { $ne: id } 
       });
       if (existingUser) {
@@ -565,15 +682,30 @@ export const updateStudent = async (
       }
     }
 
+    if (changedFields.email && changedFields.email !== undefined) {
+      const existingEmailUser = await User.findOne({ 
+        email: changedFields.email, 
+        _id: { $ne: id } 
+      });
+      if (existingEmailUser) {
+        return res.status(409).json({
+          error: 'Another user with this email already exists'
+        });
+      }
+    }
+
+    // Perform the update with only changed fields
+    console.log(`🎯 Updating ${Object.keys(changedFields).length} changed fields:`, Object.keys(changedFields));
+    
     const updatedStudent = await User.findByIdAndUpdate(
       id,
-      updateData,
+      { $set: changedFields }, // Only update changed fields
       { new: true, runValidators: true }
     ).lean();
 
     if (!updatedStudent) {
       return res.status(404).json({
-        error: 'Student not found'
+        error: 'Student not found during update'
       });
     }
 
@@ -597,14 +729,30 @@ export const updateStudent = async (
       lastName: updatedStudent.lastName,
     };
 
-    console.log(`✅ Updated student: ${updatedStudent.handle}`);
+    console.log(`✅ Successfully updated student: ${updatedStudent.handle}`);
     res.json({
       message: 'Student updated successfully',
-      student: formattedStudent
+      student: formattedStudent,
+      changesDetected: true,
+      updatedFields: Object.keys(changedFields),
+      changesSummary: Object.keys(changedFields).map(field => ({
+        field,
+        oldValue: normalizeValue(currentStudent[field]) || null,
+        newValue: normalizeValue(changedFields[field]) || null
+      }))
     });
 
   } catch (error) {
     console.error('Error in updateStudent:', error);
+    
+    // Handle MongoDB duplicate key errors
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern || {})[0] || 'field';
+      return res.status(409).json({
+        error: `Another user with this ${field} already exists`
+      });
+    }
+    
     next(error);
   }
 };
@@ -704,58 +852,211 @@ interface CFRatingChange {
     result: CFSubmission[];
   }
   
-  /** GET /students/:id/contest-history - Get contest history for a student */
-  export const getStudentContestHistory = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      const { id } = req.params;
-      const { days = '365' } = req.query;
-      
-      console.log(`📊 Getting contest history for student: ${id}, days: ${days}`);
-  
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({
-          error: 'Invalid student ID format'
-        });
-      }
-  
-      // Get student from database
-      const student = await User.findById(id).lean();
-      if (!student) {
-        return res.status(404).json({
-          error: 'Student not found'
-        });
-      }
-  
-      // Fetch rating changes from Codeforces API
-      console.log(`📡 Fetching rating changes for handle: ${student.handle}`);
-      
-      const cfResponse = await axios.get<CFRatingResponse>(
+// Add these interfaces to your controller file
+// Add these interfaces to your controller file
+
+interface CFContest {
+  id: number;
+  name: string;
+  type: string;
+  phase: string;
+  frozen: boolean;
+  durationSeconds: number;
+  startTimeSeconds?: number;
+  relativeTimeSeconds?: number;
+}
+
+interface CFContestListResponse {
+  status: 'OK' | 'FAILED';
+  result: CFContest[];
+}
+
+interface CFContestStandingsResponse {
+  status: 'OK' | 'FAILED';
+  result: {
+    contest: CFContest;
+    problems: Array<{
+      contestId: number;
+      index: string;
+      name: string;
+      type: string;
+      points?: number;
+      rating?: number;
+      tags: string[];
+    }>;
+    rows: any[];
+  };
+}
+
+/** GET /students/:id/contest-history - Get contest history for a student */
+export const getStudentContestHistory = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const { days = '365' } = req.query;
+    
+    console.log(`📊 Getting contest history for student: ${id}, days: ${days}`);
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        error: 'Invalid student ID format'
+      });
+    }
+
+    // Get student from database
+    const student = await User.findById(id).lean();
+    if (!student) {
+      return res.status(404).json({
+        error: 'Student not found'
+      });
+    }
+
+    // Fetch data from Codeforces API
+    console.log(`📡 Fetching data for handle: ${student.handle}`);
+    
+    const [cfRatingResponse, cfSubmissionsResponse] = await Promise.all([
+      axios.get<CFRatingResponse>(
         `https://codeforces.com/api/user.rating?handle=${encodeURIComponent(student.handle)}`,
         { timeout: 10000 }
-      );
-  
-      if (cfResponse.data.status !== 'OK') {
-        return res.status(400).json({
-          error: 'Failed to fetch contest history from Codeforces'
-        });
+      ),
+      axios.get<CFStatusResponse>(
+        `https://codeforces.com/api/user.status?handle=${encodeURIComponent(student.handle)}`,
+        { timeout: 15000 }
+      )
+    ]);
+
+    if (cfRatingResponse.data.status !== 'OK' || cfSubmissionsResponse.data.status !== 'OK') {
+      return res.status(400).json({
+        error: 'Failed to fetch data from Codeforces'
+      });
+    }
+
+    const allRatingChanges = cfRatingResponse.data.result;
+    const allSubmissions = cfSubmissionsResponse.data.result;
+    
+    // Filter rating changes by date range
+    const daysNumber = parseInt(days as string, 10);
+    const cutoffTime = Math.floor(Date.now() / 1000) - (daysNumber * 24 * 60 * 60);
+    
+    const filteredChanges = allRatingChanges.filter(
+      change => change.ratingUpdateTimeSeconds >= cutoffTime
+    );
+
+    // Get unique contest IDs from filtered changes
+    const contestIds = [...new Set(filteredChanges.map(change => change.contestId))];
+    
+    // Create a map of user's solved problems (ever, not just in contest period)
+    const solvedProblems = new Set<string>();
+    allSubmissions
+      .filter(sub => sub.verdict === 'OK')
+      .forEach(sub => {
+        if (sub.problem.contestId) {
+          solvedProblems.add(`${sub.problem.contestId}${sub.problem.index}`);
+        }
+      });
+
+    // Function to get contest problems count
+    const getContestProblemsCount = async (contestId: number): Promise<number> => {
+      try {
+        // First try to get from contest standings (more reliable)
+        const standingsResponse = await axios.get<CFContestStandingsResponse>(
+          `https://codeforces.com/api/contest.standings?contestId=${contestId}&from=1&count=1`,
+          { timeout: 8000 }
+        );
+        
+        if (standingsResponse.data.status === 'OK') {
+          return standingsResponse.data.result.problems.length;
+        }
+      } catch (error) {
+        console.log(`⚠️ Could not fetch standings for contest ${contestId}, trying alternative`);
       }
-  
-      const allRatingChanges = cfResponse.data.result;
-      
-      // Filter by date range
-      const daysNumber = parseInt(days as string, 10);
-      const cutoffTime = Math.floor(Date.now() / 1000) - (daysNumber * 24 * 60 * 60);
-      
-      const filteredChanges = allRatingChanges.filter(
-        change => change.ratingUpdateTimeSeconds >= cutoffTime
-      );
-  
-      // Process data for frontend
-      const contestHistory = filteredChanges.map(change => ({
+
+      // Fallback: estimate from submissions in that contest
+      const contestSubmissions = allSubmissions.filter(sub => sub.problem.contestId === contestId);
+      const uniqueProblems = new Set(contestSubmissions.map(sub => sub.problem.index));
+      return uniqueProblems.size || 0;
+    };
+
+    // Process contest history with detailed problem information
+    const contestHistoryPromises = filteredChanges.map(async (change) => {
+      let totalProblems = 0;
+      let unsolvedProblems = 0;
+      let contestProblems: Array<{
+        index: string;
+        name: string;
+        rating?: number;
+        tags: string[];
+        solved: boolean;
+        url: string;
+      }> = [];
+
+      try {
+        // Get detailed contest information including problems
+        const standingsResponse = await axios.get<CFContestStandingsResponse>(
+          `https://codeforces.com/api/contest.standings?contestId=${change.contestId}&from=1&count=1`,
+          { timeout: 8000 }
+        );
+        
+        if (standingsResponse.data.status === 'OK') {
+          const problems = standingsResponse.data.result.problems;
+          totalProblems = problems.length;
+          
+          // Process each problem to determine if user solved it
+          contestProblems = problems.map(problem => {
+            const problemKey = `${problem.contestId}${problem.index}`;
+            const isSolved = solvedProblems.has(problemKey);
+            
+            return {
+              index: problem.index,
+              name: problem.name,
+              rating: problem.rating,
+              tags: problem.tags || [],
+              solved: isSolved,
+              url: `https://codeforces.com/contest/${problem.contestId}/problem/${problem.index}`
+            };
+          });
+          
+          // Count solved and unsolved
+          const solvedCount = contestProblems.filter(p => p.solved).length;
+          unsolvedProblems = totalProblems - solvedCount;
+          
+          console.log(`Contest ${change.contestId}: ${totalProblems} total, ${solvedCount} solved, ${unsolvedProblems} unsolved`);
+        } else {
+          // Fallback: try to get problems from user submissions
+          const contestSubmissions = allSubmissions.filter(sub => sub.problem.contestId === change.contestId);
+          const uniqueProblemsMap = new Map();
+          
+          contestSubmissions.forEach(sub => {
+            const problemKey = `${sub.problem.contestId}${sub.problem.index}`;
+            if (!uniqueProblemsMap.has(problemKey)) {
+              uniqueProblemsMap.set(problemKey, {
+                index: sub.problem.index,
+                name: sub.problem.name,
+                rating: sub.problem.rating,
+                tags: sub.problem.tags || [],
+                solved: solvedProblems.has(problemKey),
+                url: `https://codeforces.com/contest/${sub.problem.contestId}/problem/${sub.problem.index}`
+              });
+            }
+          });
+          
+          contestProblems = Array.from(uniqueProblemsMap.values());
+          totalProblems = contestProblems.length;
+          const solvedCount = contestProblems.filter(p => p.solved).length;
+          unsolvedProblems = totalProblems - solvedCount;
+        }
+      } catch (error) {
+        console.error(`Error processing contest ${change.contestId}:`, error);
+        // Set defaults if we can't determine
+        totalProblems = 0;
+        unsolvedProblems = 0;
+        contestProblems = [];
+      }
+
+      return {
         contestId: change.contestId,
         contestName: change.contestName,
         date: new Date(change.ratingUpdateTimeSeconds * 1000).toISOString(),
@@ -763,54 +1064,67 @@ interface CFRatingChange {
         oldRating: change.oldRating,
         newRating: change.newRating,
         ratingChange: change.newRating - change.oldRating,
-        timestamp: change.ratingUpdateTimeSeconds
-      }));
-  
-      // Calculate statistics
-      const stats = {
-        totalContests: contestHistory.length,
-        averageRank: contestHistory.length > 0 
-          ? Math.round(contestHistory.reduce((sum, c) => sum + c.rank, 0) / contestHistory.length)
-          : 0,
-        ratingChange: contestHistory.length > 0
-          ? contestHistory[contestHistory.length - 1].newRating - contestHistory[0].oldRating
-          : 0,
-        bestRank: contestHistory.length > 0 
-          ? Math.min(...contestHistory.map(c => c.rank))
-          : 0,
-        worstRank: contestHistory.length > 0
-          ? Math.max(...contestHistory.map(c => c.rank))
-          : 0
+        timestamp: change.ratingUpdateTimeSeconds,
+        totalProblems,
+        unsolvedProblems,
+        solvedProblems: totalProblems - unsolvedProblems,
+        problems: contestProblems.sort((a, b) => a.index.localeCompare(b.index)) // Sort by problem index (A, B, C, etc.)
       };
-  
-      console.log(`✅ Contest history processed: ${contestHistory.length} contests found`);
-  
-      res.json({
-        student: {
-          _id: student._id.toString(),
-          name: student.name,
-          handle: student.handle,
-          currentRating: student.rating,
-          maxRating: student.maxRating,
-          rank: student.rank
-        },
-        contestHistory: contestHistory.reverse(), // Most recent first
-        stats,
-        filterDays: daysNumber
+    });
+
+    // Wait for all contest processing to complete
+    const contestHistory = await Promise.all(contestHistoryPromises);
+
+    // Calculate statistics
+    const stats = {
+      totalContests: contestHistory.length,
+      averageRank: contestHistory.length > 0 
+        ? Math.round(contestHistory.reduce((sum, c) => sum + c.rank, 0) / contestHistory.length)
+        : 0,
+      ratingChange: contestHistory.length > 0
+        ? contestHistory[contestHistory.length - 1].newRating - contestHistory[0].oldRating
+        : 0,
+      bestRank: contestHistory.length > 0 
+        ? Math.min(...contestHistory.map(c => c.rank))
+        : 0,
+      worstRank: contestHistory.length > 0
+        ? Math.max(...contestHistory.map(c => c.rank))
+        : 0,
+      totalUnsolvedProblems: contestHistory.reduce((sum, c) => sum + c.unsolvedProblems, 0),
+      totalSolvedProblems: contestHistory.reduce((sum, c) => sum + c.solvedProblems, 0),
+      averageProblemsPerContest: contestHistory.length > 0
+        ? Math.round(contestHistory.reduce((sum, c) => sum + c.totalProblems, 0) / contestHistory.length)
+        : 0
+    };
+
+    console.log(`✅ Contest history processed: ${contestHistory.length} contests found`);
+
+    res.json({
+      student: {
+        _id: student._id.toString(),
+        name: student.name,
+        handle: student.handle,
+        currentRating: student.rating,
+        maxRating: student.maxRating,
+        rank: student.rank
+      },
+      contestHistory: contestHistory.reverse(), // Most recent first
+      stats,
+      filterDays: daysNumber
+    });
+
+  } catch (error) {
+    console.error('Error in getStudentContestHistory:', error);
+    
+    if (error.response?.status === 400) {
+      return res.status(400).json({
+        error: 'Invalid Codeforces handle or user not found'
       });
-  
-    } catch (error) {
-      console.error('Error in getStudentContestHistory:', error);
-      
-      if (error.response?.status === 400) {
-        return res.status(400).json({
-          error: 'Invalid Codeforces handle or user not found'
-        });
-      }
-      
-      next(error);
     }
-  };
+    
+    next(error);
+  }
+};
   
   /** GET /students/:id/problem-solving - Get problem solving data for a student */
   /** GET /students/:id/problem-solving - Get problem solving data for a student */

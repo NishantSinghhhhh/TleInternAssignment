@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, ExternalLink, Calendar, Trophy, Target, TrendingUp, Activity, BarChart3 } from "lucide-react"
+import { X, ExternalLink, Calendar, Trophy, Target, TrendingUp, BarChart3 } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from "recharts"
 import { GitHubHeatmap } from "@/components/github-heatmap"
 
@@ -31,6 +31,17 @@ interface ContestHistoryData {
   newRating: number
   ratingChange: number
   timestamp: number
+  totalProblems: number
+  unsolvedProblems: number
+  solvedProblems: number
+  problems: Array<{
+    index: string
+    name: string
+    rating?: number
+    tags: string[]
+    solved: boolean
+    url: string
+  }>
 }
 
 interface ProblemSolvingData {
@@ -85,6 +96,17 @@ export function StudentProfileModal({ isOpen, user, onClose }: StudentProfileMod
   const [problemsData, setProblemsData] = useState<ProblemSolvingData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [expandedContests, setExpandedContests] = useState<Set<number>>(new Set())
+
+  const toggleContestExpansion = (contestId: number) => {
+    const newExpanded = new Set(expandedContests)
+    if (newExpanded.has(contestId)) {
+      newExpanded.delete(contestId)
+    } else {
+      newExpanded.add(contestId)
+    }
+    setExpandedContests(newExpanded)
+  }
 
   const api = {
     get: async (url: string) => {
@@ -279,24 +301,71 @@ export function StudentProfileModal({ isOpen, user, onClose }: StudentProfileMod
                       Rating Progress
                     </h3>
                     {contestData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={300}>
-                        <LineChart data={contestData}>
+                      <ResponsiveContainer width="100%" height={400}>
+                        <LineChart data={contestData.slice().reverse()}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis 
                             dataKey="date" 
-                            tickFormatter={(value) => new Date(value).toLocaleDateString()}
+                            tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric' 
+                            })}
                           />
-                          <YAxis />
+                          <YAxis 
+                            domain={['dataMin - 50', 'dataMax + 50']}
+                            tickFormatter={(value) => Math.round(value).toString()}
+                          />
                           <Tooltip 
-                            labelFormatter={(value) => new Date(value).toLocaleDateString()}
-                            formatter={(value, name) => [value, 'Rating']}
+                            labelFormatter={(value) => `Date: ${new Date(value).toLocaleDateString()}`}
+                            formatter={(value: any,props: any) => {
+                              const contest = props.payload;
+                              return [
+                                <div key="tooltip" className="space-y-1">
+                                  <div className="font-semibold">{contest.contestName}</div>
+                                  <div>Rating: {value}</div>
+                                  <div className={`font-medium ${
+                                    contest.ratingChange >= 0 ? 'text-green-600' : 'text-red-600'
+                                  }`}>
+                                    Change: {contest.ratingChange >= 0 ? '+' : ''}{contest.ratingChange}
+                                  </div>
+                                  <div>Rank: #{contest.rank}</div>
+                                </div>,
+                                ''
+                              ];
+                            }}
                           />
                           <Line 
                             type="monotone" 
                             dataKey="newRating" 
                             stroke="#2563eb" 
-                            strokeWidth={2}
-                            dot={{ fill: '#2563eb', strokeWidth: 2, r: 4 }}
+                            strokeWidth={3}
+                            dot={(props: any) => {
+                              const { cx, cy, payload } = props;
+                              const isPositive = payload.ratingChange >= 0;
+                              return (
+                                <g>
+                                  <circle
+                                    cx={cx}
+                                    cy={cy}
+                                    r={6}
+                                    fill={isPositive ? '#10b981' : '#ef4444'}
+                                    stroke="#fff"
+                                    strokeWidth={2}
+                                  />
+                                  {/* Rating change label */}
+                                  <text
+                                    x={cx}
+                                    y={cy - 15}
+                                    textAnchor="middle"
+                                    className="text-xs font-semibold"
+                                    fill={isPositive ? '#10b981' : '#ef4444'}
+                                  >
+                                    {payload.ratingChange >= 0 ? '+' : ''}{payload.ratingChange}
+                                  </text>
+                                </g>
+                              );
+                            }}
+                            activeDot={{ r: 8, stroke: '#2563eb', strokeWidth: 2, fill: '#fff' }}
                           />
                         </LineChart>
                       </ResponsiveContainer>
@@ -314,29 +383,155 @@ export function StudentProfileModal({ isOpen, user, onClose }: StudentProfileMod
                       Contest Results ({contestData.length} contests)
                     </h3>
                     {contestData.length > 0 ? (
-                      <div className="space-y-3 max-h-64 overflow-y-auto">
+                      <div className="space-y-4 max-h-96 overflow-y-auto">
                         {contestData.map((contest, index) => (
-                          <div key={index} className="bg-white rounded-lg p-3 border">
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1">
-                                <div className="font-medium text-gray-900">
-                                  {contest.contestName}
+                          <div key={index} className="bg-white rounded-lg border shadow-sm">
+                            {/* Contest Header */}
+                            <div className="p-4 border-b border-gray-100">
+                              <div className="flex justify-between items-start mb-3">
+                                <div className="flex-1">
+                                  <div className="font-medium text-gray-900 mb-1">
+                                    {contest.contestName}
+                                  </div>
+                                  <div className="text-sm text-gray-600">
+                                    {formatDate(contest.timestamp)} • Rank: #{contest.rank}
+                                  </div>
                                 </div>
-                                <div className="text-sm text-gray-600">
-                                  {formatDate(contest.timestamp)} • Rank: {contest.rank}
+                                <div className="text-right">
+                                  <div className="text-sm font-medium">
+                                    {contest.oldRating} → {contest.newRating}
+                                  </div>
+                                  <div className={`text-sm font-semibold ${
+                                    contest.ratingChange >= 0 ? 'text-green-600' : 'text-red-600'
+                                  }`}>
+                                    {formatRatingChange(contest.ratingChange)}
+                                  </div>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <div className="text-sm font-medium">
-                                  {contest.oldRating} → {contest.newRating}
+                              
+                              {/* Problem Solving Stats */}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-4 text-sm">
+                                  <div className="flex items-center">
+                                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                                    <span className="text-gray-600">Solved:</span>
+                                    <span className="font-medium text-green-700 ml-1">
+                                      {contest.solvedProblems || 0}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
+                                    <span className="text-gray-600">Unsolved:</span>
+                                    <span className="font-medium text-red-700 ml-1">
+                                      {contest.unsolvedProblems || 0}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <span className="w-2 h-2 bg-gray-400 rounded-full mr-2"></span>
+                                    <span className="text-gray-600">Total:</span>
+                                    <span className="font-medium text-gray-700 ml-1">
+                                      {contest.totalProblems || 0}
+                                    </span>
+                                  </div>
                                 </div>
-                                <div className={`text-sm font-semibold ${
-                                  contest.ratingChange >= 0 ? 'text-green-600' : 'text-red-600'
-                                }`}>
-                                  {formatRatingChange(contest.ratingChange)}
+                                
+                                <div className="flex items-center space-x-3">
+                                  {contest.totalProblems > 0 && (
+                                    <div className="text-xs text-gray-500">
+                                      {Math.round((contest.solvedProblems / contest.totalProblems) * 100)}% solved
+                                    </div>
+                                  )}
+                                  <button
+                                    onClick={() => toggleContestExpansion(contest.contestId)}
+                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+                                  >
+                                    {expandedContests.has(contest.contestId) ? 'Hide Problems' : 'Show Problems'}
+                                  </button>
                                 </div>
                               </div>
                             </div>
+
+                            {/* Expanded Problem List */}
+                            {expandedContests.has(contest.contestId) && contest.problems && contest.problems.length > 0 && (
+                              <div className="p-4">
+                                <h4 className="font-medium text-gray-900 mb-3">Problems:</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {contest.problems.map((problem, problemIndex) => (
+                                    <div
+                                      key={problemIndex}
+                                      className={`p-3 rounded-lg border transition-colors ${
+                                        problem.solved 
+                                          ? 'bg-green-50 border-green-200' 
+                                          : 'bg-red-50 border-red-200'
+                                      }`}
+                                    >
+                                      <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                          <div className="flex items-center mb-2">
+                                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mr-2 ${
+                                              problem.solved 
+                                                ? 'bg-green-500 text-white' 
+                                                : 'bg-red-500 text-white'
+                                            }`}>
+                                              {problem.index}
+                                            </span>
+                                            <a
+                                              href={problem.url}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className={`font-medium hover:underline transition-colors ${
+                                                problem.solved 
+                                                  ? 'text-green-800 hover:text-green-900' 
+                                                  : 'text-red-800 hover:text-red-900'
+                                              }`}
+                                            >
+                                              {problem.name}
+                                            </a>
+                                          </div>
+                                          
+                                          {problem.rating && (
+                                            <div className="text-xs text-gray-600 mb-1">
+                                              Rating: <span 
+                                                className="font-medium" 
+                                                style={{ color: getRatingColor(problem.rating) }}
+                                              >
+                                                {problem.rating}
+                                              </span>
+                                            </div>
+                                          )}
+                                          
+                                          {problem.tags && problem.tags.length > 0 && (
+                                            <div className="flex flex-wrap gap-1">
+                                              {problem.tags.slice(0, 3).map((tag, tagIndex) => (
+                                                <span
+                                                  key={tagIndex}
+                                                  className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"
+                                                >
+                                                  {tag}
+                                                </span>
+                                              ))}
+                                              {problem.tags.length > 3 && (
+                                                <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
+                                                  +{problem.tags.length - 3} more
+                                                </span>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                        
+                                        <div className={`text-xs font-medium px-2 py-1 rounded ${
+                                          problem.solved 
+                                            ? 'bg-green-100 text-green-800' 
+                                            : 'bg-red-100 text-red-800'
+                                        }`}>
+                                          {problem.solved ? 'Solved' : 'Unsolved'}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

@@ -1,9 +1,9 @@
 // components/add-user-modal.tsx
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { X, User, Mail, Phone, Globe, MapPin, Building2 } from "lucide-react"
+import { X, User, Mail, Phone, Globe, MapPin, Building2, Save, RotateCcw } from "lucide-react"
 
 interface AddUserModalProps {
   isOpen: boolean
@@ -24,23 +24,89 @@ interface UserFormData {
   organization?: string
 }
 
-export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModalProps) {
-  const [formData, setFormData] = useState<UserFormData>({
-    name: "",
-    email: "",
-    phone: "",
-    handle: "",
-    firstName: "",
-    lastName: "",
-    country: "",
-    city: "",
-    organization: "",
-  })
+const STORAGE_KEY = 'cp31_add_user_form_data'
 
+// Default form data
+const defaultFormData: UserFormData = {
+  name: "",
+  email: "",
+  phone: "",
+  handle: "",
+  firstName: "",
+  lastName: "",
+  country: "",
+  city: "",
+  organization: "",
+}
+
+export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModalProps) {
+  const [formData, setFormData] = useState<UserFormData>(defaultFormData)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+  const [hasStoredData, setHasStoredData] = useState(false)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
+
+  // Load saved form data when component mounts or modal opens
+  useEffect(() => {
+    if (isOpen) {
+      loadSavedFormData()
+    }
+  }, [isOpen])
+
+  // Save form data to localStorage whenever formData changes
+  useEffect(() => {
+    if (isOpen && hasStoredData) {
+      saveFormData()
+    }
+  }, [formData, isOpen, hasStoredData])
+
+  const loadSavedFormData = () => {
+    try {
+      const savedData = localStorage.getItem(STORAGE_KEY)
+      if (savedData) {
+        const parsedData = JSON.parse(savedData)
+        // Validate that the saved data has the correct structure
+        if (parsedData && typeof parsedData === 'object') {
+          setFormData({ ...defaultFormData, ...parsedData })
+          setHasStoredData(true)
+          console.log('📂 Loaded saved form data:', parsedData)
+        }
+      }
+    } catch (error) {
+      console.error('Error loading saved form data:', error)
+      // If there's an error, clear the corrupted data
+      localStorage.removeItem(STORAGE_KEY)
+    }
+  }
+
+  const saveFormData = () => {
+    try {
+      // Only save if at least one field has meaningful data
+      const hasData = Object.values(formData).some(value => value && value.trim() !== '')
+      if (hasData) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(formData))
+        console.log('💾 Saved form data to localStorage')
+      }
+    } catch (error) {
+      console.error('Error saving form data:', error)
+    }
+  }
+
+  const clearSavedData = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY)
+      setFormData(defaultFormData)
+      setHasStoredData(false)
+      setShowClearConfirm(false)
+      console.log('🗑️ Cleared saved form data')
+    } catch (error) {
+      console.error('Error clearing saved data:', error)
+    }
+  }
 
   const handleInputChange = (field: keyof UserFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+    setHasStoredData(true) // Mark that we now have data to save
+    
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: "" }))
@@ -77,18 +143,13 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
 
     try {
       await onSubmit(formData)
-      // Reset form on success
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        handle: "",
-        firstName: "",
-        lastName: "",
-        country: "",
-        city: "",
-        organization: "",
-      })
+      
+      // After successful submission, you can choose to:
+      // Option 1: Keep the data for next time (current behavior)
+      // Option 2: Clear the data after successful submission
+      // Uncomment the next line if you want to clear data after submission:
+      // clearSavedData()
+      
       setErrors({})
       onClose()
     } catch (error) {
@@ -98,20 +159,18 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
 
   const handleClose = () => {
     if (!loading) {
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        handle: "",
-        firstName: "",
-        lastName: "",
-        country: "",
-        city: "",
-        organization: "",
-      })
+      // Don't clear form data when closing - keep it for next time
       setErrors({})
+      setShowClearConfirm(false)
       onClose()
     }
+  }
+
+  const resetForm = () => {
+    setFormData(defaultFormData)
+    setErrors({})
+    setHasStoredData(false)
+    setShowClearConfirm(false)
   }
 
   if (!isOpen) return null
@@ -122,15 +181,65 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Add New Student</h2>
-            <button
-              onClick={handleClose}
-              disabled={loading}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Add New Student</h2>
+              {hasStoredData && (
+                <p className="text-sm text-green-600 mt-1">
+                  📂 Form data restored from previous session
+                </p>
+              )}
+            </div>
+            <div className="flex items-center space-x-2">
+              {hasStoredData && (
+                <div className="flex space-x-1">
+                  <button
+                    onClick={() => setShowClearConfirm(true)}
+                    disabled={loading}
+                    className="p-2 hover:bg-red-50 text-red-600 rounded-full transition-colors disabled:opacity-50"
+                    title="Clear saved data"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+              <button
+                onClick={handleClose}
+                disabled={loading}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
+
+          {/* Clear confirmation dialog */}
+          {showClearConfirm && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-red-800">Clear saved form data?</p>
+                  <p className="text-xs text-red-600 mt-1">This will reset all fields and remove saved data.</p>
+                </div>
+                <div className="flex space-x-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowClearConfirm(false)}
+                    className="text-gray-600"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={clearSavedData}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -310,46 +419,83 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-end space-x-3 pt-6 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={loading}
-                className="px-6"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={loading}
-                className="px-6 bg-blue-600 hover:bg-blue-700"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Creating...
-                  </>
-                ) : (
-                  "Create Student"
+            <div className="flex justify-between pt-6 border-t">
+              <div className="flex space-x-2">
+                {hasStoredData && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={resetForm}
+                    disabled={loading}
+                    className="px-4 text-gray-600"
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Reset Form
+                  </Button>
                 )}
-              </Button>
+              </div>
+              
+              <div className="flex space-x-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                  disabled={loading}
+                  className="px-6"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 bg-blue-600 hover:bg-blue-700"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Create Student
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </form>
 
-          {/* Info Note */}
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-start">
-              <Globe className="w-5 h-5 text-blue-600 mr-2 mt-0.5" />
-              <div className="text-sm text-blue-800">
-                <p className="font-medium mb-1">Automatic Data Fetching</p>
-                <p>
-                  When you provide a valid Codeforces handle, we'll automatically fetch additional information 
-                  like rating, rank, and other profile details from Codeforces. Any missing information will 
-                  be filled in automatically if available.
-                </p>
+          {/* Info Notes */}
+          <div className="mt-6 space-y-3">
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start">
+                <Globe className="w-5 h-5 text-blue-600 mr-2 mt-0.5" />
+                <div className="text-sm text-blue-800">
+                  <p className="font-medium mb-1">Automatic Data Fetching</p>
+                  <p>
+                    When you provide a valid Codeforces handle, we'll automatically fetch additional information 
+                    like rating, rank, and other profile details from Codeforces. Any missing information will 
+                    be filled in automatically if available.
+                  </p>
+                </div>
               </div>
             </div>
+
+            {hasStoredData && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-start">
+                  <Save className="w-5 h-5 text-green-600 mr-2 mt-0.5" />
+                  <div className="text-sm text-green-800">
+                    <p className="font-medium mb-1">Form Data Saved</p>
+                    <p>
+                      Your form data is automatically saved locally and will be restored when you reopen this modal. 
+                      Use the reset button to clear saved data if needed.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

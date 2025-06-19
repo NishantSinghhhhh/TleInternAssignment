@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import axios from "axios"
-import { Header } from "@/components/header"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { ErrorMessage } from "@/components/error-message"
 import { TableControls } from "@/components/table-controls"
@@ -230,7 +229,7 @@ export default function CPSheetPage() {
     setIsAddingUser(true)
     
     try {
-      const response = await api.post('/students', userData)
+      const response = await api.post('/students/create-student', userData)
       
       if (response.status === 201) {
         console.log('Student created successfully:', response.data)
@@ -437,8 +436,7 @@ export default function CPSheetPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
-
+  
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">CP-31 Sheet</h1>
@@ -470,14 +468,13 @@ export default function CPSheetPage() {
               loading={loading}
             />
 
-            {!isSearchMode && (
               <PaginationInfo
                 currentPage={currentPage}
                 pageSize={pageSize}
                 totalCount={totalCount}
                 onPageSizeChange={handlePageSizeChange}
               />
-            )}
+
 
             <UsersTable 
               users={users} 
@@ -487,13 +484,13 @@ export default function CPSheetPage() {
               loading={loading || isEditingUser || isDeletingUser}
             />
 
-            {!isSearchMode && (
+     
               <PaginationControls 
                 currentPage={currentPage} 
                 totalPages={totalPages} 
                 onPageChange={handlePageChange} 
               />
-            )}
+          
 
             <StatisticsCards 
               users={users} 
