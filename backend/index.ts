@@ -32,12 +32,23 @@ app.use(helmet());
 app.use(compression());
 if (process.env.NODE_ENV !== 'production') app.use(morgan('dev'));
 
+const allowed = (process.env.CLIENT_URL ?? '')
+  .split(',')                 // comma-separated list in .env
+  .map(s => s.trim().replace(/\/$/, ''));   // strip trailing slash
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: (origin, cb) => {
+      // allow requests with no Origin header (e.g. curl, Postman)
+      if (!origin) return cb(null, true);
+      const clean = origin.replace(/\/$/, '');
+      if (allowed.includes(clean)) return cb(null, true);
+      cb(new Error('CORS: origin not allowed'));
+    },
     credentials: true,
   }),
 );
+
 app.use(express.json());
 
 /* ─────────────────────────────────── Routes ────────────────────────────────────── */
