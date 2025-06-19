@@ -131,7 +131,7 @@ export function EditUserModal({ isOpen, user, onClose, onSubmit, loading }: Edit
     try {
       await onSubmit(user._id, formData)
       onClose()
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting form:", error)
     }
   }

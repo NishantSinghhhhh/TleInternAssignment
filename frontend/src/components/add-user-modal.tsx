@@ -71,7 +71,7 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
           console.log('📂 Loaded saved form data:', parsedData)
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading saved form data:', error)
       // If there's an error, clear the corrupted data
       localStorage.removeItem(STORAGE_KEY)
@@ -86,7 +86,7 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
         localStorage.setItem(STORAGE_KEY, JSON.stringify(formData))
         console.log('💾 Saved form data to localStorage')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving form data:', error)
     }
   }
@@ -98,7 +98,7 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
       setHasStoredData(false)
       setShowClearConfirm(false)
       console.log('🗑️ Cleared saved form data')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error clearing saved data:', error)
     }
   }
@@ -152,7 +152,7 @@ export function AddUserModal({ isOpen, onClose, onSubmit, loading }: AddUserModa
       
       setErrors({})
       onClose()
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting form:", error)
     }
   }

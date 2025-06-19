@@ -346,7 +346,7 @@ export const fetchStudentDetails = async (
     const totalPages = Math.ceil(totalCount / limit)
     res.json({ data: formattedStudents, page, limit, totalPages, totalCount })
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in fetchStudentDetails:', error)
     next(error)
   }
@@ -450,7 +450,7 @@ export const createStudent = async (
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in createStudent:', error);
     next(error);
   }
@@ -525,7 +525,7 @@ export const bulkCreateStudents = async (
           handle: savedUser.handle
         });
 
-      } catch (error) {
+      } catch (error: any) {
         results.errors.push({
           handle: studentData.handle || 'unknown',
           error: error.message
@@ -540,7 +540,7 @@ export const bulkCreateStudents = async (
       results
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in bulkCreateStudents:', error);
     next(error);
   }
@@ -597,7 +597,7 @@ export const getStudentById = async (
     console.log(`✅ Found student: ${student.handle}`);
     res.json(formattedStudent);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in getStudentById:', error);
     next(error);
   }
@@ -656,7 +656,7 @@ export const getStudentStats = async (
     console.log('✅ Statistics compiled successfully');
     res.json(stats);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in getStudentStats:', error);
     next(error);
   }
@@ -862,7 +862,7 @@ export const updateStudent = async (
       }))
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in updateStudent:', error);
     
     // Handle MongoDB duplicate key errors
@@ -913,7 +913,7 @@ export const deleteStudent = async (
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in deleteStudent:', error);
     next(error);
   }
@@ -1001,7 +1001,7 @@ export const getStudentContestHistory = async (
         if (standingsResponse.data.status === 'OK') {
           return standingsResponse.data.result.problems.length;
         }
-      } catch (error) {
+      } catch (error: any) {
         console.log(`⚠️ Could not fetch standings for contest ${contestId}, trying alternative`);
       }
 
@@ -1079,7 +1079,7 @@ export const getStudentContestHistory = async (
           const solvedCount = contestProblems.filter(p => p.solved).length;
           unsolvedProblems = totalProblems - solvedCount;
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error(`Error processing contest ${change.contestId}:`, error);
         // Set defaults if we can't determine
         totalProblems = 0;
@@ -1144,7 +1144,7 @@ export const getStudentContestHistory = async (
       filterDays: daysNumber
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in getStudentContestHistory:', error);
     
     if (error.response?.status === 400) {
@@ -1387,7 +1387,7 @@ export const getStudentProblemSolving = async (
         filterDays: daysNumber
       });
   
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in getStudentProblemSolving:', error);
       
       if (error.response?.status === 400) {
@@ -1489,7 +1489,7 @@ export const getStudentProblemSolving = async (
         lastUpdated: new Date().toISOString()
       });
   
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in getStudentProfile:', error);
       next(error);
     }

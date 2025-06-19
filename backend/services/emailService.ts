@@ -38,7 +38,7 @@ class EmailService {
       });
 
       console.log('✅ OAuth2 client initialized');
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Failed to initialize OAuth2:', error);
     }
   }
@@ -60,7 +60,7 @@ class EmailService {
       });
 
       return transporter;
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error creating transporter:', error);
       throw error;
     }
@@ -342,26 +342,6 @@ class EmailService {
     return stats;
   }
 
-  async testEmailService(): Promise<boolean> {
-    try {
-      const { token } = await this.oauth2Client.getAccessToken();
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          type:         'OAuth2',
-          user:         process.env.EMAIL_USER,
-          clientId:     process.env.CLIENT_ID,
-          clientSecret: process.env.CLIENT_SECRET,
-          refreshToken: process.env.REFRESH_TOKEN,
-          accessToken:  token,
-        },
-      });
-      return transporter;
-    } catch (error) {
-      console.error('❌ Error creating transporter:', error);
-      throw error;
-    }
-  }
 }
 
 export default EmailService;

@@ -63,7 +63,7 @@ class CFSyncService {
       const settings = await SyncSettings.getCurrentSettings();
       await this.updateCronJob(settings);
       console.log('🚀 CF Sync Service initialized successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Failed to initialize CF Sync Service:', error);
     }
   }
@@ -175,7 +175,7 @@ class CFSyncService {
       console.log(`✅ CF sync completed: ${result.usersSynced} synced, ${result.usersFailed} failed`);
       return result;
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ CF sync failed:', error);
 
       // Update error status
@@ -248,7 +248,7 @@ class CFSyncService {
       console.log(`✅ User synced successfully: ${handle}`);
       return { success: true };
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(`❌ Failed to sync user ${handle}:`, error.message);
       return { success: false, error: error.message };
     }
@@ -314,7 +314,7 @@ class CFSyncService {
           );
 
           result.usersSynced++;
-        } catch (error) {
+        } catch (error: any) {
           result.usersFailed++;
           result.failedUsers.push({
             handle: cfUser.handle,
@@ -332,7 +332,7 @@ class CFSyncService {
         }
       }
 
-    } catch (error) {
+    } catch (error: any) {
       // If batch fails, mark all users as failed
       for (const user of users) {
         result.usersFailed++;

@@ -59,7 +59,7 @@ export const runManualSync = async (
       startTime: new Date()
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error starting manual sync:', error);
     next(error);
   }
@@ -401,7 +401,7 @@ export const getSyncStatus = async (
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting sync status:', error);
     next(error);
   }
@@ -485,7 +485,7 @@ export const syncSingleUser = async (
       });
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error syncing single user:', error);
     next(error);
   }
@@ -542,7 +542,7 @@ export const updateSyncSettings = async (
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating sync settings:', error);
     next(error);
   }
@@ -582,7 +582,7 @@ export const getSyncLogs = async (
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting sync logs:', error);
     next(error);
   }
@@ -636,7 +636,7 @@ export const getUsersSyncStatus = async (
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting users sync status:', error);
     next(error);
   }
@@ -692,7 +692,7 @@ export const checkUserHandle = async (
         } : null
       });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error checking user handle:', error);
       next(error);
     }

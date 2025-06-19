@@ -44,7 +44,7 @@ app.use(express.json());
 app.get('/', (_req, res) => {
   // Your root URL now returns a tiny HTML page instead of 404 / forced-download
   res.type('text/html').send(
-    `<h1>PullQuest API</h1>
+    `<h1>TLE </h1>
      <p>Status: <a href="/health">/health</a></p>`,
   );
 });
@@ -90,7 +90,7 @@ const ensureDefaultSyncSettings = async () => {
       console.log(`🌍 Timezone: ${existingSettings.timezone}`);
       console.log(`📊 Enabled: ${existingSettings.enabled}`);
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Failed to ensure sync settings:', error);
   }
 };
@@ -101,7 +101,7 @@ const initializeSyncService = async () => {
     const syncService = CFSyncService.getInstance();
     await syncService.initialize();
     console.log('✅ CF Sync Service initialized - Daily sync at 2 AM enabled');
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Failed to initialize sync service:', error);
   }
 };
