@@ -1,6 +1,6 @@
 // backend/src/routes/studentRoutes.ts
 
-import { Router } from 'express';
+import { Router, RequestHandler } from 'express';
 import { 
   // Existing functions
   fetch100Users, 
@@ -42,24 +42,24 @@ router.get('/list', fetchStudentDetails);
 
 router.get('/stats', getStudentStats);
 
-router.post('/create-student', createStudent);
+router.post('/create-student', createStudent as unknown as RequestHandler);
 
-router.post('/bulk', bulkCreateStudents);
+router.post('/bulk', bulkCreateStudents as unknown as RequestHandler);
 
-router.get('/:id', getStudentById);
+router.get('/:id', getStudentById as unknown as RequestHandler);
 
-router.put('/:id', updateStudent);
+router.put('/:id', updateStudent as unknown as RequestHandler);
 
-router.get('/:id/profile', getStudentProfile);
+router.get('/:id/profile', getStudentProfile as unknown as RequestHandler);
 
-router.get('/:id/contest-history', getStudentContestHistory);
+router.get('/:id/contest-history', getStudentContestHistory as unknown as RequestHandler);
 
-router.get('/:id/problem-solving', getStudentProblemSolving);
+router.get('/:id/problem-solving', getStudentProblemSolving as unknown as RequestHandler);
 
-router.get('/:id', getStudentById);
+router.get('/:id', getStudentById as unknown as RequestHandler);
 
-router.delete('/:id', deleteStudent);
+router.delete('/:id', deleteStudent as unknown as RequestHandler);
 
-router.patch( '/:id/notifications/inactivity', toggleInactivityEmails);
+router.patch( '/:id/notifications/inactivity', toggleInactivityEmails as unknown as RequestHandler);
 
 export default router;

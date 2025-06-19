@@ -1,10 +1,17 @@
 // backend/src/index.ts
-
-import express, { Application, Request, Response, NextFunction } from 'express';
+import express, {
+  Application,
+  Request,
+  Response,
+  NextFunction,
+} from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cron from 'node-cron';
+import morgan from 'morgan';            // NEW (nice in dev, optional in prod)
+import helmet from 'helmet';            // NEW (basic security headers)
+import compression from 'compression';  // NEW (gzip responses)
 
 import SyncSettings from './models/SyncSettings';
 import CFSyncService from './services/cfSyncService';
@@ -19,11 +26,28 @@ dotenv.config();
 const app: Application = express();
 const PORT = parseInt(process.env.PORT || '8000', 10);
 
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
-  credentials: true,
-}));
+/* ────────────────────────────────── Middle-ware ────────────────────────────────── */
+app.disable('x-powered-by');      // Hide “Express” signature
+app.use(helmet());
+app.use(compression());
+if (process.env.NODE_ENV !== 'production') app.use(morgan('dev'));
+
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    credentials: true,
+  }),
+);
 app.use(express.json());
+
+/* ─────────────────────────────────── Routes ────────────────────────────────────── */
+app.get('/', (_req, res) => {
+  // Your root URL now returns a tiny HTML page instead of 404 / forced-download
+  res.type('text/html').send(
+    `<h1>PullQuest API</h1>
+     <p>Status: <a href="/health">/health</a></p>`,
+  );
+});
 
 app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({
