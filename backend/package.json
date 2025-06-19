@@ -3,11 +3,10 @@
   "version": "1.0.0",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc --noEmit false || exit 0",
-    "build-ignore-errors": "tsc --skipLibCheck --noImplicitAny false",
-    "vercel-build": "tsc --skipLibCheck --noImplicitAny false",
+    "build": "tsc",
     "start": "node dist/index.js",
     "dev": "nodemon index.ts",
+    "vercel-build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "engines": {
@@ -33,13 +32,13 @@
     "path-to-regexp": "6.2.1"
   },
   "devDependencies": {
-    "@types/compression": "^1.7.5",
-    "@types/cors": "^2.8.17", 
+    "@types/compression": "^1.8.1",
+    "@types/cors": "^2.8.19",
     "@types/helmet": "^0.0.48",
     "@types/morgan": "^1.9.10",
     "@types/node": "^24.0.3",
     "@types/node-cron": "^3.0.11",
-    "@types/nodemailer": "^6.4.19",
+    "@types/nodemailer": "^6.4.17",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
