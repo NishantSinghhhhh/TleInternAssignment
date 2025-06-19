@@ -1,17 +1,14 @@
 import { Router } from 'express';
 import {
-
-  sendEmailToUser,    // New
-  sendEmailByHandle,  // New
-  testEmailService    // New
+  sendEmailToUser,
+  sendEmailByHandle,  
+  testEmailService
 } from '../controllers/emailController';
 
 const router = Router();
 
-
-router.post('/send-to-user', sendEmailToUser);        // Send by user ID
-router.post('/send-by-handle', sendEmailByHandle);    // Send by handle
-
+router.post('/send-to-user', sendEmailToUser);     
+router.post('/send-by-handle', sendEmailByHandle);    
 router.get('/test-service', testEmailService);
 
 export default router;

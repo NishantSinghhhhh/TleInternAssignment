@@ -33,6 +33,7 @@ interface CFUser {
   friendOfCount: number
   firstName?: string
   lastName?: string
+  activeLast7Days: boolean;
 }
 
 interface UserFormData {

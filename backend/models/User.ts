@@ -4,13 +4,11 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
-  
-  // Basic user info
+
   name: string;
   email?: string;
   phone?: string;
   
-  // Codeforces profile data
   handle: string;
   vkId?: string;
   openId?: string;
@@ -30,17 +28,26 @@ export interface IUser extends Document {
   avatar: string;
   titlePhoto: string;
 
-  // Sync timestamp
   lastCfSync?: Date;
-  
-  // Timestamps
+
+  // Added for inactivity reminders
+  inactivityTracking?: {
+    lastSubmissionDate?: Date;
+    reminderCount: number;
+    lastReminderSent?: Date;
+  };
+
+  // Added for email notification preferences
+  emailNotifications?: {
+    inactivityReminders: boolean;
+  };
+
   createdAt: Date;
   updatedAt: Date;
 }
 
 const UserSchema: Schema<IUser> = new Schema(
   {
-    // Basic user information
     name: {
       type: String,
       required: [true, 'Name is required'],
@@ -54,11 +61,10 @@ const UserSchema: Schema<IUser> = new Schema(
       lowercase: true,
       sparse: true,
       unique: true,
-      default: undefined, // This ensures empty emails are stored as undefined, not ""
+      default: undefined,
       match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email'],
       validate: {
         validator: function(v: string) {
-          // Allow undefined/null, but if provided, must be valid email
           return v == null || v === '' || /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v);
         },
         message: 'Please enter a valid email address'
@@ -68,10 +74,9 @@ const UserSchema: Schema<IUser> = new Schema(
       type: String,
       trim: true,
       sparse: true,
-      default: undefined, // Same for phone
+      default: undefined, 
     },
     
-    // Codeforces profile data
     handle: {
       type: String,
       required: [true, 'Codeforces handle is required'],
@@ -119,8 +124,17 @@ const UserSchema: Schema<IUser> = new Schema(
     avatar: { type: String, required: [true, 'Avatar URL is required'], default: 'https://userpic.codeforces.org/no-avatar.jpg' },
     titlePhoto: { type: String, default: '' },
     
-    // Sync timestamp
     lastCfSync: { type: Date, default: null, index: true },
+
+    // New schema additions
+    inactivityTracking: {
+      lastSubmissionDate: Date,
+      reminderCount: { type: Number, default: 0 },
+      lastReminderSent: Date
+    },
+    emailNotifications: {
+      inactivityReminders: { type: Boolean, default: true }
+    }
   },
   {
     timestamps: true,
@@ -142,42 +156,31 @@ UserSchema.index({ rank: 1 });
 UserSchema.index({ country: 1 });
 UserSchema.index({ createdAt: -1 });
 UserSchema.index({ lastCfSync: -1 });
-
 // Compound indexes
 UserSchema.index({ rating: -1, rank: 1 });
 UserSchema.index({ country: 1, rating: -1 });
 UserSchema.index({ lastCfSync: -1 });
+
 // Pre-save middleware to handle empty strings
 UserSchema.pre('save', function(next) {
-  // Convert empty strings to undefined for unique sparse fields
   if (this.email === '') this.email = undefined;
   if (this.phone === '') this.phone = undefined;
-  
-  // Handle lowercase conversion for handle
   if (this.handle) this.handle = this.handle.toLowerCase();
-  
-  // Ensure maxRating is always >= rating
   if (this.rating > this.maxRating) this.maxRating = this.rating;
-  
   next();
 });
 
-// Pre-update middleware to handle empty strings in updates
+// Pre-update middleware
 UserSchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], function(next) {
   const update = this.getUpdate() as any;
-  
   if (update) {
-    // Handle direct updates
     if (update.email === '') update.email = undefined;
     if (update.phone === '') update.phone = undefined;
-    
-    // Handle $set updates
     if (update.$set) {
       if (update.$set.email === '') update.$set.email = undefined;
       if (update.$set.phone === '') update.$set.phone = undefined;
     }
   }
-  
   next();
 });
 

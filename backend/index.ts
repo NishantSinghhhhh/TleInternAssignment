@@ -8,6 +8,7 @@ import SyncSettings from './models/SyncSettings';
 import CFSyncService from './services/cfSyncService'; 
 import studentRoutes from './routes/studentRoutes';
 import syncRoutes from './routes/syncRoutes';
+import emailRoutes from './routes/emailRoutes';
 
 dotenv.config();
 
@@ -28,9 +29,9 @@ app.get('/health', (_req: Request, res: Response) => {
   });
 });
 
-
 app.use('/students', studentRoutes);
 app.use('/sync', syncRoutes);
+app.use('/email', emailRoutes);
 
 const ensureDefaultSyncSettings = async () => {
   try {

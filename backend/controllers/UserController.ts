@@ -175,7 +175,7 @@ export const fetch100Users = async (
   }
 };
 
-/** GET /students/list - Get all users from database with pagination */
+
 export const fetchStudentDetails = async (
   req: Request,
   res: Response,
@@ -263,9 +263,6 @@ export const fetchStudentDetails = async (
   }
 };
 
-// ========== CREATE OPERATIONS ==========
-
-/** POST /students - Create new student */
 export const createStudent = async (
   req: Request,
   res: Response,

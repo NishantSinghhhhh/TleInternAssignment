@@ -4,6 +4,7 @@ import { UserAvatar } from "./user-avatar";
 import { RatingBadge } from "./rating-badge";
 import { Link } from "react-router-dom";
 import { Edit2, Trash2, ExternalLink, Eye, Mail, CheckCircle, XCircle } from "lucide-react";
+import * as Tooltip from '@radix-ui/react-tooltip'
 
 interface CFUser {
   _id: string;
@@ -24,7 +25,8 @@ interface CFUser {
   firstName?: string;
   lastName?: string;
   lastCfSync?: string | null;
-  recentSubmissions?: boolean;
+  // New flag for 7-day activity
+  activeLast7Days: boolean;
 }
 
 interface UsersTableProps {
@@ -71,9 +73,8 @@ export function UsersTable({
     }
   }
 
-  const hasRecentSubmissions = (user: CFUser): boolean => {
-    return user.recentSubmissions ?? Math.random() > 0.5;
-  }
+  // Use the new activeLast7Days property directly
+  const hasRecentSubmissions = (user: CFUser): boolean => user.activeLast7Days;
 
   if (users.length === 0) {
     return (
@@ -181,32 +182,30 @@ export function UsersTable({
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center w-32">
-                    {(() => {
-                      const hasSubmissions = hasRecentSubmissions(user)
-                      return (
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            hasSubmissions 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
-                          title={`${hasSubmissions ? 'Has' : 'No'} submissions in last 7 days`}
-                        >
-                          {hasSubmissions ? (
-                            <>
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Yes
-                            </>
-                          ) : (
-                            <>
-                              <XCircle className="w-3 h-3 mr-1" />
-                              No
-                            </>
-                          )}
-                        </span>
-                      )
-                    })()}
-                  </td>
+                {hasRecentSubmissions(user) ? (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <CheckCircle className="w-3 h-3 mr-1" /> Yes
+                  </span>
+                ) : (
+                  <Tooltip.Root delayDuration={200}>
+                    <Tooltip.Trigger asChild>
+                      <span
+                        onClick={() => onSendActivationMail?.(user)}
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 cursor-pointer hover:bg-gray-200"
+                      >
+                        <XCircle className="w-3 h-3 mr-1" /> No
+                      </span>
+                    </Tooltip.Trigger>
+                    <Tooltip.Portal>
+                      <Tooltip.Content side="top" align="center" sideOffset={5} className="bg-gray-700 text-white text-xs rounded px-2 py-1 shadow-lg">
+                        Click to send a “Please get active again” email
+                        <Tooltip.Arrow className="fill-gray-700" />
+                      </Tooltip.Content>
+                    </Tooltip.Portal>
+                  </Tooltip.Root>
+                )}
+              </td>
+
                   {(onEdit || onDelete || onViewProfile || onSendActivationMail) && (
                     <td className="px-6 py-4 whitespace-nowrap text-center w-48">
                       <div className="flex items-center justify-center space-x-1">
