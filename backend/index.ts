@@ -36,19 +36,13 @@ const allowed = (process.env.CLIENT_URL ?? '')
   .split(',')                 // comma-separated list in .env
   .map(s => s.trim().replace(/\/$/, ''));   // strip trailing slash
 
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      // allow requests with no Origin header (e.g. curl, Postman)
-      if (!origin) return cb(null, true);
-      const clean = origin.replace(/\/$/, '');
-      if (allowed.includes(clean)) return cb(null, true);
-      cb(new Error('CORS: origin not allowed'));
-    },
-    credentials: true,
-    optionsSuccessStatus: 204, 
-  }),
-);
+  app.use(
+    cors({
+      origin: '*', // Allow all origins temporarily
+      credentials: true,
+      optionsSuccessStatus: 204,
+    })
+  );
 
 app.use(express.json());
 
@@ -142,12 +136,6 @@ mongoose
     console.log('✅ MongoDB connected');
 
     await initializeSyncService();
-
-    app.listen(PORT, () => {
-      console.log(`🚀 Server listening on http://localhost:${PORT}`);
-      console.log(`📅 CF Sync scheduled to run daily at 2 AM (Asia/Kolkata)`);
-    });
-
     cron.schedule(
       process.env.EMAIL_REMINDER_CRON || '0 2 * * *',
       async () => {
