@@ -2,7 +2,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Download, Database, Save, UserPlus } from "lucide-react"
+import { Download, Database, UserPlus } from "lucide-react"
 
 interface TableControlsProps {
   onLoadFromDatabase: () => void
@@ -17,7 +17,6 @@ interface TableControlsProps {
 export function TableControls({
   onLoadFromDatabase,
   onAddUser,
-  onFetchFromAndSave,
   onDownloadCSV,
   currentPage,
   totalUsers,
